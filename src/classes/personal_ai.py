@@ -11,8 +11,8 @@ from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 
 # Importar as classes que PersonalAI utiliza
-from pose_detector import PoseDetector
-from squat_analyzer import SquatRepetitionAnalyzer
+from .pose_detector import PoseDetector
+from .squat_analyzer import SquatRepetitionAnalyzer
 
 class PersonalAI:
     def __init__(self, file_name, name_pessoa, model_path,

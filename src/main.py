@@ -4,11 +4,11 @@ import pandas as pd # Usado para exibir DataFrames no Streamlit
 import os # Usado para manusear o arquivo temporário
 
 # --- Importações das suas classes e utilitários separados ---
-from personal_ai import PersonalAI # Importa a classe PersonalAI do novo arquivo
-from utils import feedback_messages # Importa o dicionário de feedback do novo arquivo
+from classes.personal_ai import PersonalAI # Importa a classe PersonalAI do novo arquivo
+from ultils.feedback_messages import feedback_messages # Importa o dicionário de feedback do novo arquivo
 
 # O 'model_path' deve ser o nome exato do seu arquivo de modelo do MediaPipe.
-model_path = 'pose_landmarker_full.task'
+model_path = 'models/pose_landmarker_full.task'
 
 # --- REMOVA A CLASSE PersonalAI AQUI ---
 # Remova todo o bloco da classe PersonalAI que estava aqui antes.
