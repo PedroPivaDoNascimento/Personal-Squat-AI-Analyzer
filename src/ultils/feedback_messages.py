@@ -1,4 +1,3 @@
-# src/utils/feedback_messages.py
 feedback_messages = {
     'trunk_error': "Verifique a inclinação do tronco: Mantenha o peito aberto e a coluna neutra. Evite curvar as costas excessivamente para frente ou para trás.",
     'knee_error': "Atenção ao alinhamento dos joelhos: Certifique-se de que seus joelhos sigam a linha dos pés, evitando que eles se desviem para dentro.",

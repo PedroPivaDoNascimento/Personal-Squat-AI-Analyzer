@@ -1,33 +1,25 @@
-# main.py (Finalizado para a modularização das classes)
 import streamlit as st
 import pandas as pd # Usado para exibir DataFrames no Streamlit
 import os # Usado para manusear o arquivo temporário
 
-# --- Importações das suas classes e utilitários separados ---
+# --- Importações das classes e utilitários separados ---
 from classes.personal_ai import PersonalAI # Importa a classe PersonalAI do novo arquivo
 from ultils.feedback_messages import feedback_messages # Importa o dicionário de feedback do novo arquivo
 
 # O 'model_path' deve ser o nome exato do seu arquivo de modelo do MediaPipe.
 model_path = 'models/pose_landmarker_full.task'
 
-# --- REMOVA A CLASSE PersonalAI AQUI ---
-# Remova todo o bloco da classe PersonalAI que estava aqui antes.
-
-# --- REMOVA O DICIONÁRIO feedback_messages AQUI ---
-# Remova todo o bloco do dicionário feedback_messages que estava aqui antes.
-
-
 # --- Streamlit UI ---
-st.title('Análise Sagital Direita - Refatoração Finalizada: Modularização')
+st.title('Análise Sagital Direita - Agachamento')
 name_input = st.text_input('Nome da pessoa')
 uploaded = st.file_uploader('Envie o vídeo (Sagital Direita)', type=['mp4', 'avi', 'mov'])
 
-st.write('### Configurações de Visualização')
-col_display1, col_display2 = st.columns(2)
-with col_display1:
-    draw = st.checkbox('Desenhar Marcadores Corporais', value=True)
-with col_display2:
-    display = st.checkbox('Mostrar Vídeo Durante Análise', value=False)
+#st.write('### Configurações de Visualização')
+#col_display1, col_display2 = st.columns(2)
+#with col_display1:
+#    draw = st.checkbox('Desenhar Marcadores Corporais', value=True)
+#with col_display2:
+#    display = st.checkbox('Mostrar Vídeo Durante Análise', value=False)
 
 st.write('### Parâmetros de Avaliação do Exercício')
 col_param1, col_param2 = st.columns(2)
@@ -41,9 +33,12 @@ with col_param2:
     foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 20, 5, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
 
 if uploaded and name_input:
+    # Extrai a extensão do arquivo original
     ext = os.path.splitext(uploaded.name)[1]
+    # Cria um nome de arquivo temporário
     temp_path = f'temp_sag_dir{ext}'
 
+    # Salva o conteúdo do arquivo enviado em disco
     with open(temp_path, 'wb') as f:
         f.write(uploaded.getbuffer())
     st.info('Analisando vídeo...')
@@ -57,7 +52,7 @@ if uploaded and name_input:
         head_error_threshold=head_err_th,
         foot_error_threshold=foot_err_th
     )
-    ai.process_video(draw, display)
+    ai.process_video(True, True) # Testando com draw=True e display=True
     st.success('Análise concluída!')
     
     st.markdown(f"""
@@ -70,6 +65,7 @@ if uploaded and name_input:
     
     if ai.squat_analyzer.repetitions_detected > 0: 
         st.write('### Contagem de Desvios por Repetição') 
+        # Cria um DataFrame para exibir os desvios por repetição
         error_data = {
             'Repetição': [f'Rep {i+1}' for i in range(len(ai.squat_analyzer.trunk_error_history))],
             'Tronco': ai.squat_analyzer.trunk_error_history,
@@ -77,8 +73,10 @@ if uploaded and name_input:
             'Cabeça': ai.squat_analyzer.head_error_history,
             'Calcanhar': ai.squat_analyzer.foot_error_history
         }
+
+        # Define a coluna 'Repetição' como índice
         df_errors = pd.DataFrame(error_data).set_index('Repetição')
-        
+        # Deixa o gráfico vísivel na tela
         st.bar_chart(df_errors, use_container_width=True, height=400)
         st.markdown("""
         **Eixo Y:** Duração do Desvio (em Instantes).
@@ -121,11 +119,4 @@ if uploaded and name_input:
 
     else:
         st.write('Nenhuma repetição foi detectada com os parâmetros atuais. Por favor, verifique se o movimento de agachamento foi completo ou ajuste os parâmetros de sensibilidade.')
-
-    st.write('### Detalhe da Análise Ponto a Ponto (Momentos de Desvio)') 
-    st.dataframe(ai.head_df)
-    st.dataframe(ai.trunk_df)
-    st.dataframe(ai.heel_df)
-    st.dataframe(ai.knee_df)
-
-    st.write(f'### Tempo total de análise do vídeo: {ai.execution_time:.2f} segundos')
+        

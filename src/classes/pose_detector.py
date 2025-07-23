@@ -1,20 +1,15 @@
-# pose_detector.py
 import mediapipe as mp
-from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 
 class PoseDetector:
     def __init__(self, model_path):
-        base_options = python.BaseOptions(model_asset_path=model_path)
-        options = python.vision.PoseLandmarkerOptions(
-            base_options=base_options,
-            running_mode=python.vision.RunningMode.VIDEO
-        )
-        self._landmarker = python.vision.PoseLandmarker.create_from_options(options)
+        self._landmarker = vision.PoseLandmarker.create_from_model_path(model_path)
 
-    def detect(self, image_data, timestamp_ms):
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_data)
-        return self._landmarker.detect_for_video(mp_image, int(timestamp_ms))
+    def detect(self, image): 
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+
+        # Realiza a detecção de pose
+        return self._landmarker.detect(mp_image)
 
     def close(self):
-        if self._landmarker:
-            self._landmarker.close()
+        self._landmarker.close()
