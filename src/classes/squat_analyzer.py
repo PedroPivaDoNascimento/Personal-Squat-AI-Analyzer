@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from mediapipe import solutions # Necessário para acessar PoseLandmark
+from mediapipe import solutions
 
 class SquatRepetitionAnalyzer:
     def __init__(self, 
@@ -42,9 +42,6 @@ class SquatRepetitionAnalyzer:
         # Lista para armazenar os timestamps de finalização de cada repetição
         self.repetition_timestamps = []
         
-        # Variável para armazenar a diferença inicial da cabeça e do ombro
-        self.head_initial_diff = None
-
     def process_frame_landmarks(self, landmarks_obj, timestamp_ms): 
         """ hp: Significa Head Posture (Postura da Cabeça).
 
@@ -62,15 +59,11 @@ class SquatRepetitionAnalyzer:
 
         ear_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y 
         
-        if self.head_initial_diff is None:
-            self.head_initial_diff = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_SHOULDER].y - landmarks_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y
-
         self._detect_repetition_phase(ear_y, timestamp_ms)
         
         hp, tr, hl, kn = self._check_errors(landmarks_obj) 
         
         return hp, tr, hl, kn 
-
 
     def _detect_repetition_phase(self, ear_y, ts):
         if self.ear_y_inicial is None: # Se ainda não calibramos a posição inicial
@@ -104,90 +97,140 @@ class SquatRepetitionAnalyzer:
                     self.current_phase = 'inicial'
                     self.min_y_in_rep = None
 
+    def create_dictionary_landmarks(self, lm_obj):
+        """
+        Extrai as coordenadas das landmarks essenciais e as armazena em um dicionário.
+        """
+        return {
+            'right_shoulder_x': lm_obj[12].x,
+            'right_hip_x': lm_obj[24].x,
+            'right_knee_x': lm_obj[26].x,
+            'right_ankle_x': lm_obj[28].x,
+            'right_eye_x': lm_obj[5].x,
+            'right_ear_x': lm_obj[7].x,
+            'right_big_toe_x': lm_obj[32].x,
+            'right_heel_x': lm_obj[30].x,
+            'right_shoulder_y': lm_obj[12].y,
+            'right_hip_y': lm_obj[24].y,
+            'right_knee_y': lm_obj[26].y,
+            'right_ankle_y': lm_obj[28].y,
+            'right_eye_y': lm_obj[5].y,
+            'right_ear_y': lm_obj[7].y,
+            'right_big_toe_y': lm_obj[32].y,
+            'right_heel_y': lm_obj[30].y
+        }
+
+    def _check_head_posture_error(self, dict_lm):
+        """
+        Verifica o erro de postura da cabeça (Plano de Frankfurt).
+        Retorna 1 se houver erro e incrementa o contador, 0 caso contrário.
+        """
+
+        hp_status = 0
+        try:
+            # Calcula o ângulo da cabeça usando a posição do olho e da orelha
+            head_angle_rad = math.atan2(dict_lm['right_ear_y'] - dict_lm['right_eye_y'], dict_lm['right_ear_x'] - dict_lm['right_eye_x'])
+            head_angle_deg = math.degrees(head_angle_rad)
+            
+            # Define a tolerância
+            tolerance_deg = 5
+            
+            # O ângulo deve estar próximo de 0 graus OU próximo de 180/-180 graus.
+            is_aligned_horizontal = (
+                abs(head_angle_deg) <= tolerance_deg or # Próximo de 0 graus
+                abs(abs(head_angle_deg) - 180) <= tolerance_deg # Próximo de 180 ou -180 graus
+            )
+            
+            # Se NÃO estiver alinhado horizontalmente, é um erro.
+            if not is_aligned_horizontal:
+                self.head_error_counter += 1
+                hp_status = 1
+        except Exception as e:
+            print(f"Erro específico no cálculo da cabeça: {e}")
+        return hp_status
+
+    def _check_trunk_flexion_error(self, dict_lm):
+        """
+        Verifica o erro de excesso de flexão do tronco em relação à tíbia.
+        Retorna 1 se houver erro e incrementa o contador, 0 caso contrário.
+        """
+        tr_status = 0
+        try:
+            trunk_angle_rad = math.atan2(dict_lm['right_hip_y'] - dict_lm['right_shoulder_y'], dict_lm["right_hip_x"] - dict_lm['right_shoulder_x'])
+            trunk_angle_deg = abs(math.degrees(trunk_angle_rad))
+            
+            tibia_angle_rad = math.atan2(dict_lm['right_ankle_y'] - dict_lm['right_knee_y'], dict_lm['right_ankle_x'] - dict_lm['right_knee_x'])
+            tibia_angle_deg = abs(math.degrees(tibia_angle_rad))
+
+            if trunk_angle_deg < tibia_angle_deg:
+                self.trunk_error_counter += 1
+                tr_status = 1
+        except Exception as e:
+            print(f"Erro específico no cálculo do tronco: {e}")
+        return tr_status
+
+    def _check_knee_translation_error(self, dict_lm):
+        """
+        Verifica o erro de translação excessiva do joelho em relação ao pé.
+        Retorna 1 se houver erro e incrementa o contador, 0 caso contrário.
+        """
+        kn_status = 0
+        try:
+            foot_length_x = abs(dict_lm['right_big_toe_x'] - dict_lm['right_heel_x'])
+            allowed_forward_translation = foot_length_x * 0.30
+            
+            if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:    
+                self.knee_error_counter += 1
+                kn_status = 1
+        except Exception as e:
+            print(f"Erro específico no cálculo do joelho (translação do pé): {e}")
+        return kn_status
+    
+    def _check_heel_lift_error(self, dict_lm):
+        """
+        Verifica o erro de elevação do calcanhar.
+        Retorna 1 se houver erro e incrementa o contador, 0 caso contrário.
+        """
+        hl_status = 0
+        try:
+            if (dict_lm['right_ankle_y'] - dict_lm["right_heel_y"]) > 0.01:
+                self.foot_error_counter += 1
+                hl_status = 1
+        except Exception as e:
+            print(f"Erro específico no cálculo do calcanhar: {e}")
+        return hl_status
 
     def _check_errors(self, lm_obj):
+        # Inicialização dos Status de Erro para o Frame Atual
         hp_status = tr_status = hl_status = kn_status = 0
 
+        # Somente verifica erros se a fase atual for 'descendo' ou 'subindo'
         if self.current_phase in ['descendo', 'subindo']:
             try:
-                # Landmarks para o cálculo da inclinação do tronco
-                shoulder_y = lm_obj[solutions.pose.PoseLandmark.RIGHT_SHOULDER].y
-                shoulder_x = lm_obj[solutions.pose.PoseLandmark.RIGHT_SHOULDER].x
-                hip_y = lm_obj[solutions.pose.PoseLandmark.RIGHT_HIP].y
-                hip_x = lm_obj[solutions.pose.PoseLandmark.RIGHT_HIP].x
-                
-                # Landmarks para o cálculo do alinhamento do joelho (alguns já foram pegos acima)
-                knee_x = lm_obj[solutions.pose.PoseLandmark.RIGHT_KNEE].x
-                ankle_x = lm_obj[solutions.pose.PoseLandmark.RIGHT_ANKLE].x
-                
-                # Landmarks para o cálculo da postura da cabeça
-                right_ear_y = lm_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y
-
-                # Landmarks para o cálculo da elevação do calcanhar
-                heel_y = lm_obj[solutions.pose.PoseLandmark.RIGHT_HEEL].y
-                ankle_y = lm_obj[solutions.pose.PoseLandmark.RIGHT_ANKLE].y
-                
+                dict_lm = self.create_dictionary_landmarks(lm_obj)
             except Exception as e:
-                print(f"Erro ao acessar landmarks para cálculo de erros: {e}. Análise de erros ignorada para este frame.")
+                print(f"Erro ao acessar landmarks essenciais para cálculo de erros: {e}. Análise de erros ignorada para este frame.")
                 return hp_status, tr_status, hl_status, kn_status
             
-            # ERRO DE TRONCO (TRUNK) - Inclinação
-            try:
-                # Calcula a inclinação da linha que vai do seu ombro ao quadril.
-                angle_rad = math.atan2(hip_y - shoulder_y, hip_x - shoulder_x)
-                angle_deg = abs(math.degrees(angle_rad))
-                
-                if not (70 <= angle_deg <= 110):
-                    self.trunk_error_counter += 1 
-                    tr_status = 1
-            except Exception as e:
-                print(f"Erro específico no cálculo do tronco: {e}")
-                pass 
+            # 1. ERRO DE POSTURA DA CABEÇA (HEAD POSTURE - Plano de Frankfurt)
+            hp_status = self._check_head_posture_error(dict_lm)
 
-            # ERRO DE JOELHO (KNEE) - Alinhamento Horizontal
-            try:
-                margin_x = 0.03 # Uma pequena margem de tolerância.
-                # Verifica se o joelho está alinhado entre o quadril e o tornozelo.
-                if not (min(hip_x, ankle_x) - margin_x <= knee_x <= max(hip_x, ankle_x) + margin_x):
-                    self.knee_error_counter += 1 
-                    kn_status = 1 
-            except Exception as e:
-                print(f"Erro específico no cálculo do joelho: {e}")
-                pass
+            # 2. ERRO DE TRONCO (TRUNK) - Excesso de Flexão em relação à Tíbia
+            tr_status = self._check_trunk_flexion_error(dict_lm)
 
-            # ERRO DE POSTURA DA CABEÇA (HEAD POSTURE)
-            try:
-                # Calcula a diferença de altura entre o ombro e a orelha neste frame.
-                current_head_diff = shoulder_y - right_ear_y
-                
-                # Verifica se a diferença de altura da cabeça está dentro de um intervalo aceitável.
-                if self.head_initial_diff is not None and \
-                (current_head_diff < self.head_initial_diff * 0.9 or current_head_diff > self.head_initial_diff * 1.1):
-                    self.head_error_counter += 1 
-                    hp_status = 1
-            except Exception as e:
-                print(f"Erro específico no cálculo da cabeça: {e}")
-                pass
-            
-            # ERRO DE ELEVAÇÃO DO CALCANHAR (HEEL LIFT)
-            try:
-                # Verifica se o calcanhar está levantado em relação ao tornozelo.
-                if (ankle_y - heel_y) > 0.01:
-                    self.foot_error_counter += 1 
-                    hl_status = 1
-            except Exception as e:
-                print(f"Erro específico no cálculo do calcanhar: {e}")
-                pass
-        
+            # 3. ERRO DE JOELHO (KNEE) - Translação Excessiva em relação ao Pé
+            kn_status = self._check_knee_translation_error(dict_lm)
+                    
+            # 4. ERRO DE ELEVAÇÃO DO CALCANHAR (HEEL LIFT)
+            hl_status = self._check_heel_lift_error(dict_lm)
+         
         return hp_status, tr_status, hl_status, kn_status
-
 
     def _reset_error_counters(self):
         self.trunk_error_counter = 0
         self.knee_error_counter = 0
         self.head_error_counter = 0
         self.foot_error_counter = 0
-
 
     def _complete_repetition(self, current_ts):
         if self.repetitions_detected < 3: 
@@ -209,7 +252,6 @@ class SquatRepetitionAnalyzer:
             self.repetitions_detected += 1
             self.repetition_timestamps.append(current_ts / 1000)
             
-
     def finalize_analysis(self):  
         if self.repetitions_detected == 0 and self.current_phase != 'inicial':
             print("Nenhuma repetição completa detectada neste vídeo. Preenchendo slots com 'None'.")
@@ -238,3 +280,4 @@ class SquatRepetitionAnalyzer:
                 self.head_error_history.append(None)
                 self.foot_error_history.append(None)
                 print(f"  Slot para Repetição {i+1} preenchido com 'None'.")
+    

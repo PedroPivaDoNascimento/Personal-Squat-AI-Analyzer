@@ -14,7 +14,7 @@ class PersonalAI:
                  descent_threshold=0.05, ascent_return_threshold=0.02,
                  trunk_error_threshold=5, knee_error_threshold=5,
                  head_error_threshold=5, foot_error_threshold=5):
-        
+    
         self.file_name = file_name
         self.name_pessoa = name_pessoa
         self.image_q = queue.Queue()
