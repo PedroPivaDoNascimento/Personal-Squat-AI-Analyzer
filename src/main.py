@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
+import cv2
 
 from classes.personal_ai import PersonalAI
 from ultils.feedback_messages import feedback_messages
+from classes.squat_report_excel_writer import SquatReportExcelWriter
 
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
@@ -54,6 +56,14 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         f.write(uploaded_file.getbuffer())
     st.info('Analisando vídeo...')
 
+    # --- Cálculo da duração total do vídeo em segundos ---
+    cap = cv2.VideoCapture(temp_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    total_video_duration_seconds = frame_count / fps if fps > 0 else 0
+    cap.release()
+    # --- FIM DO CÁLCULO ---
+
     # Inicializa a classe PersonalAI com os parâmetros do usuário
     ai = PersonalAI(
         temp_path, name_input, MODEL_PATH,
@@ -62,7 +72,9 @@ def process_and_analyze_video(uploaded_file, name_input, params):
     # Processa o vídeo. draw=True e display=True são para visualização durante o processo.
     ai.process_video(True, True) 
     st.success('Análise concluída!')
-    
+
+    excel_writer = SquatReportExcelWriter(name_input, ai.squat_analyzer)
+    excel_writer.generate_report(total_video_duration_seconds)     
     # Limpa o arquivo temporário após o processamento
     os.remove(temp_path)
     return ai
