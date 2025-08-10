@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import cv2
 
 from classes.personal_ai import PersonalAI
 from ultils.feedback_messages import feedback_messages
@@ -24,12 +23,12 @@ def setup_app_ui():
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 20, 5, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
-        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 20, 5, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
+        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 35, 35, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
+        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 35, 25, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
-        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 20, 5, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
-        foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 20, 5, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
+        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 35, 13, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
+        foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 35, 5, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
 
     params = {
         'descent_threshold': descent_th,
@@ -56,14 +55,6 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         f.write(uploaded_file.getbuffer())
     st.info('Analisando vídeo...')
 
-    # --- Cálculo da duração total do vídeo em segundos ---
-    cap = cv2.VideoCapture(temp_path)
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    total_video_duration_seconds = frame_count / fps if fps > 0 else 0
-    cap.release()
-    # --- FIM DO CÁLCULO ---
-
     # Inicializa a classe PersonalAI com os parâmetros do usuário
     ai = PersonalAI(
         temp_path, name_input, MODEL_PATH,
@@ -74,7 +65,7 @@ def process_and_analyze_video(uploaded_file, name_input, params):
     st.success('Análise concluída!')
 
     excel_writer = SquatReportExcelWriter(name_input, ai.squat_analyzer)
-    excel_writer.generate_report(total_video_duration_seconds)     
+    excel_writer.generate_report()     
     # Limpa o arquivo temporário após o processamento
     os.remove(temp_path)
     return ai
