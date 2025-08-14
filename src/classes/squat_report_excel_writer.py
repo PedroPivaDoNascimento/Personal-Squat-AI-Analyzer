@@ -25,11 +25,12 @@ class SquatReportExcelWriter:
             df_report (pd.DataFrame): O DataFrame do relatório a ser preenchido.
         """
         # Mapeamento das chaves internas do analyzer.reps para os nomes de exibição
+        # CORREÇÃO: A chave 'Pé' deve ser mapeada para 'heel', não 'foot'.
         body_part_map_internal_to_display = {
             'Cabeça': 'head',
             'Tronco': 'trunk',
             'Joelho': 'knee',
-            'Pé': 'foot'
+            'Pé': 'heel'
         }
 
         # Itera sobre as linhas do DataFrame para preencher os dados de repetição
@@ -88,6 +89,7 @@ class SquatReportExcelWriter:
         df_report = pd.DataFrame(data_for_df, columns=columns)
 
         # 5. Mapeamento das chaves internas do analyzer para os nomes de exibição
+        # A chave 'Pé' deve ser mapeada para 'foot_error_history'.
         body_part_map_internal_to_display = {
             'Cabeça': 'head_error_history',
             'Tronco': 'trunk_error_history',

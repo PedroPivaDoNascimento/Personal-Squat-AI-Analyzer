@@ -20,6 +20,17 @@ class SquatRepetitionAnalyzer:
 
         self.ear_y_inicial = None
         self.ear_y_history = []
+
+        self.heel_y_inicial = None
+        self.heel_y_history = []
+
+        #As variaveis iniciais do programa, visando evitar os erros das landmarks sairem de um ponto para o outro
+        self.ankle_x_inicial = None
+        self.ankle_x_history = []
+        self.knee_x_inicial = None
+        self.knee_x_history = []
+
+
         self.repetitions_detected = 0
         self.current_phase = 'inicial'
         self.min_y_in_rep = None
@@ -60,20 +71,27 @@ class SquatRepetitionAnalyzer:
             print("!!!!!!!!!!Nenhum landmark detectado.!!!!!!!!!")
             return hp, tr, hl, kn 
 
-        ear_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y 
+        ear_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y
+        heel_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_HEEL].y 
         
-        self._detect_repetition_phase(ear_y, timestamp_ms)
+        self._detect_repetition_phase(ear_y, heel_y, timestamp_ms)
         
         hp, tr, hl, kn = self._check_errors(landmarks_obj) 
         
         return hp, tr, hl, kn 
 
-    def _detect_repetition_phase(self, ear_y, ts):
-        if self.ear_y_inicial is None: # Se ainda não calibramos a posição inicial
-            if len(self.ear_y_history) >= 10: # Se já coletamos 10 ou mais pontos
+    def _detect_repetition_phase(self, ear_y, heel_y, ts):
+        if self.ear_y_inicial is None and self.heel_y_inicial is None and self.knee_x_inicial is None and self.ankle_x_inicial is None: # Se ainda não calibramos a posição inicial
+            if len(self.ear_y_history) >= 10 and len(self.heel_y_history) >= 10 and len(self.knee_x_history) >= 10 and len(self.ankle_x_history) >= 10: # Se já coletamos 10 ou mais pontos
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
+                self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
+                self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
+                self.ankle_x_inicial = np.mean(self.ankle_x_history[-10:])
             else: # Senão, continua coletando pontos
                 self.ear_y_history.append(ear_y)
+                self.heel_y_history.append(heel_y)
+                self.knee_x_history.append(ear_y)
+                self.ankle_x_history.append(heel_y)
                 return 
         
         self.ear_y_history.append(ear_y)
@@ -106,6 +124,7 @@ class SquatRepetitionAnalyzer:
         """
         return {
             'right_shoulder_x': lm_obj[12].x,
+            'left_shoulder_x': lm_obj[11].x,
             'right_hip_x': lm_obj[24].x,
             'right_knee_x': lm_obj[26].x,
             'right_ankle_x': lm_obj[28].x,
@@ -120,57 +139,101 @@ class SquatRepetitionAnalyzer:
             'right_eye_y': lm_obj[5].y,
             'right_ear_y': lm_obj[7].y,
             'right_big_toe_y': lm_obj[32].y,
-            'right_heel_y': lm_obj[30].y
+            'right_heel_y': lm_obj[30].y,
+            'nose_x': lm_obj[0].x,
+            'nose_y': lm_obj[0].y
         }
+
+    def position_validation(self, dict_lm, name_body_part):
+        """
+        Valida a posição de uma parte do corpo não de deslocou muito em relação a posição inicial.
+        Retorna True se a posição estiver dentro dos limites aceitáveis, False caso contrário.
+        """
+        
+        if name_body_part == 'ankle':
+            if abs(dict_lm['right_ankle_x'] - self.ankle_x_inicial > 20):
+                return False
+            return True
+        elif name_body_part == 'knee':
+            if abs(dict_lm['right_knee_x'] - self.knee_x_inicial > 20):
+                return False
+            return True
+            
+        
+        return True
+
 
     def _check_head_posture_error(self, dict_lm):
         """
-        Verifica o erro de postura da cabeça e atualiza os contadores.
+        Verifica o erro de postura da cabeça comparando a posição horizontal do nariz
+        com a linha dos ombros. Esta abordagem é mais robusta para detectar
+        a "cabeça para frente" (forward head posture).
+
+        Parâmetros:
+        dict_lm: Um dicionário contendo os pontos de referência (landmarks) do corpo.
+
+        Retorna:
+        hp_status (int): 1 se um erro de postura da cabeça for detectado, 0 caso contrário.
         """
         hp_status = 0
         try:
-            head_angle_rad = math.atan2(dict_lm['right_ear_y'] - dict_lm['right_eye_y'], dict_lm['right_ear_x'] - dict_lm['right_eye_x'])
-            head_angle_deg = math.degrees(head_angle_rad)
-            tolerance_deg = 5
+            # Obter as coordenadas x dos ombros e do nariz.
+            ombro_esquerdo_x = dict_lm['left_shoulder_x']
+            ombro_direito_x = dict_lm['right_shoulder_x']
+            nariz_x = dict_lm['nose_x']
+
+            # Calcular o ponto médio horizontal entre os ombros.
+            ponto_medio_ombros_x = (ombro_esquerdo_x + ombro_direito_x) / 2
             
-            is_aligned_horizontal = (
-                abs(head_angle_deg) <= tolerance_deg or 
-                abs(abs(head_angle_deg) - 180) <= tolerance_deg 
-            )
+            # Definir uma tolerância horizontal.
+            TOLERANCIA_DESLOCAMENTO_HORIZONTAL = 0.05
             
-            if not is_aligned_horizontal:
+            # Calcular o deslocamento horizontal do nariz em relação ao ponto médio dos ombros.
+            deslocamento_x = abs(nariz_x - ponto_medio_ombros_x)
+
+            if deslocamento_x > TOLERANCIA_DESLOCAMENTO_HORIZONTAL:
                 self.consecutive_head_error_counter += 1
                 hp_status = 1
             else:
                 self.consecutive_head_error_counter = 0
 
-            # Se o limite de erros consecutivos foi atingido, incrementa o total e reseta o consecutivo
+            # Manter a lógica de contadores consecutivos.
             if self.consecutive_head_error_counter >= self.HEAD_ERROR_THRESHOLD:
                 self.total_head_error_counter += 1
                 self.consecutive_head_error_counter = 0
+
         except Exception as e:
-            print(f"Erro específico no cálculo da cabeça: {e}")
+            print(f"Erro no cálculo alternativo da cabeça: {e}")
             self.consecutive_head_error_counter = 0
+            
         return hp_status
 
     def _check_trunk_flexion_error(self, dict_lm):
         """
-        Verifica o erro de excesso de flexão do tronco e atualiza os contadores.
+        Verifica o erro de excesso de flexão do tronco e atualiza os contadores,
+        agora com uma tolerância para evitar falsos positivos.
+        
+        A tolerância permite uma pequena diferença entre o ângulo do tronco e da tíbia
+        sem que isso seja considerado um erro.
         """
         tr_status = 0
         try:
+            # Calcula o ângulo do tronco em graus.
             trunk_angle_rad = math.atan2(dict_lm['right_hip_y'] - dict_lm['right_shoulder_y'], dict_lm["right_hip_x"] - dict_lm['right_shoulder_x'])
             trunk_angle_deg = abs(math.degrees(trunk_angle_rad))
             
+            # Calcula o ângulo da tíbia em graus.
             tibia_angle_rad = math.atan2(dict_lm['right_ankle_y'] - dict_lm['right_knee_y'], dict_lm['right_ankle_x'] - dict_lm['right_knee_x'])
             tibia_angle_deg = abs(math.degrees(tibia_angle_rad))
 
-            if trunk_angle_deg < tibia_angle_deg:
+            # A condição de erro é se o ângulo do tronco for significativamente menor.
+            if trunk_angle_deg < tibia_angle_deg and self.position_validation(dict_lm, 'knee') and self.position_validation(dict_lm, 'ankle'):
                 self.consecutive_trunk_error_counter += 1
                 tr_status = 1
             else:
                 self.consecutive_trunk_error_counter = 0
 
+            # Atualiza os contadores de erro total se o erro for consecutivo.
             if self.consecutive_trunk_error_counter >= self.TRUNK_ERROR_THRESHOLD:
                 self.total_trunk_error_counter += 1
                 self.consecutive_trunk_error_counter = 0
@@ -208,7 +271,7 @@ class SquatRepetitionAnalyzer:
         """
         hl_status = 0
         try:
-            if (dict_lm['right_ankle_y'] - dict_lm["right_heel_y"]) > 0.01:
+            if (dict_lm["right_heel_y"]) < self.heel_y_inicial: # Verifica se o calcanhar está elevado
                 self.consecutive_foot_error_counter += 1
                 hl_status = 1
             else:
