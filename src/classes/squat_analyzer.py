@@ -65,26 +65,33 @@ class SquatRepetitionAnalyzer:
             print("!!!!!!!!!!Nenhum landmark detectado.!!!!!!!!!")
             return hp, tr, hl, kn
 
-        ear_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_EAR].y
-        heel_y = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_HEEL].y
-        heel_x = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_HEEL].x
-        showlder_x = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_SHOULDER].x
-        hip_x = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_HIP].x
-        knee_x = landmarks_obj[solutions.pose.PoseLandmark.RIGHT_KNEE].x
-        
-        self._detect_repetition_phase(ear_y, heel_y, heel_x, showlder_x, hip_x, knee_x, timestamp_ms)
-        
-        hp, tr, hl, kn = self._check_errors(landmarks_obj)
+        dict_lm =  self.create_dictionary_landmarks(landmarks_obj)
+        if dict_lm == {}:
+            print("Dicionário de landmarks vazio. Análise de erros ignorada para este frame.")
+            return hp, tr, hl, kn
+
+        self._detect_repetition_phase(dict_lm, timestamp_ms)
+        hp, tr, hl, kn = self._check_errors(dict_lm)
         
         return hp, tr, hl, kn
 
-    def _detect_repetition_phase(self, ear_y, heel_y, heel_x, showlder_x, hip_x, knee_x, ts):
+    def _detect_repetition_phase(self, dict_lm, ts):
+        ear_y = dict_lm['right_ear_y']
+        heel_y = dict_lm['right_heel_y']
+        heel_x = dict_lm['right_heel_x']
+        showlder_x = dict_lm['right_shoulder_x']
+        hip_x = dict_lm['right_hip_x']
+        knee_x = dict_lm['right_knee_x']
+        
         if self.ear_y_inicial is None and self.heel_y_inicial is None and self.knee_x_inicial is None and self.ankle_x_inicial is None:
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
                 
-                # MODIFICADO: Calibra o "chão" usando o valor MÁXIMO da posição Y
+                # Calibra o "chão" usando o valor MÁXIMO da posição Y
                 # para pegar o ponto mais baixo e estável do calcanhar.
+
+                # TODO: Testar de seria melhor usar a mediana ou a média dos 3 maiores valores ou fazer a média ignorando os valores extremos, visando corrigir os erros dos falsos positivos
+
                 self.heel_y_inicial = np.max(self.heel_y_history[-10:])
                 
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
@@ -127,48 +134,50 @@ class SquatRepetitionAnalyzer:
                     self.min_y_in_rep = None
 
     def create_dictionary_landmarks(self, lm_obj):
-        return {
-            'right_shoulder_x': lm_obj[12].x,
-            'left_shoulder_x': lm_obj[11].x,
-            'right_hip_x': lm_obj[24].x,
-            'right_knee_x': lm_obj[26].x,
-            'right_ankle_x': lm_obj[28].x,
-            'right_eye_x': lm_obj[5].x,
-            'right_ear_x': lm_obj[7].x,
-            'right_big_toe_x': lm_obj[32].x,
-            'right_heel_x': lm_obj[30].x,
-            'right_shoulder_y': lm_obj[12].y,
-            'right_hip_y': lm_obj[24].y,
-            'right_knee_y': lm_obj[26].y,
-            'right_ankle_y': lm_obj[28].y,
-            'right_eye_y': lm_obj[5].y,
-            'right_ear_y': lm_obj[7].y,
-            'right_big_toe_y': lm_obj[32].y,
-            'right_heel_y': lm_obj[30].y,
-            'nose_x': lm_obj[0].x,
-            'nose_y': lm_obj[0].y
-        }
+        try:
+            return {
+                'right_shoulder_x': lm_obj[12].x,
+                'left_shoulder_x': lm_obj[11].x,
+                'right_hip_x': lm_obj[24].x,
+                'right_knee_x': lm_obj[26].x,
+                'right_ankle_x': lm_obj[28].x,
+                'right_eye_x': lm_obj[5].x,
+                'left_eye_x': lm_obj[2].x,      
+                'right_ear_x': lm_obj[7].x,
+                'right_big_toe_x': lm_obj[32].x,
+                'right_heel_x': lm_obj[30].x,
+                'right_shoulder_y': lm_obj[12].y,
+                'left_shoulder_y': lm_obj[11].y,
+                'right_hip_y': lm_obj[24].y,
+                'right_knee_y': lm_obj[26].y,
+                'right_ankle_y': lm_obj[28].y,
+                'right_eye_y': lm_obj[5].y,
+                'left_eye_y': lm_obj[2].y,      
+                'right_ear_y': lm_obj[7].y,
+                'right_big_toe_y': lm_obj[32].y,
+                'right_heel_y': lm_obj[30].y,
+                'nose_x': lm_obj[0].x,
+                'nose_y': lm_obj[0].y
+            }
+        except Exception as e:
+            print(f"Erro ao criar dicionário de landmarks: {e}")
+            return {}
 
     def position_validation(self, dict_lm, name_body_part):
         if name_body_part == 'ankle':
-            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.42:
-                print("O tornozelo saiu do lugar")
+            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.45:
                 return False
         elif name_body_part == 'knee':
-            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.42:
-                print("O joelho saiu do lugar")
+            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.45:
                 return False
         elif name_body_part == 'heel':
-            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.42:
-                print("O calcanhar saiu do lugar")
+            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.1:   # ? Rever esse limite
                 return False
         elif name_body_part == 'shoulder':
-            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.42:
-                print("O ombro saiu do lugar")
+            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.45:
                 return False
         elif name_body_part == 'hip':
-            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.42:
-                print("O quadril saiu do lugar")
+            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.45:
                 return False
         else:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
@@ -177,33 +186,45 @@ class SquatRepetitionAnalyzer:
     def _check_head_posture_error(self, dict_lm):
         hp_status = 0
         try:
-            ombro_esquerdo_x = dict_lm['left_shoulder_x']
-            ombro_direito_x = dict_lm['right_shoulder_x']
-            nariz_x = dict_lm['nose_x']
+            # Coordenadas dos olhos
+            olho_direito_x = dict_lm['right_eye_x']
+            olho_direito_y = dict_lm['right_eye_y']
+            olho_esquerdo_x = dict_lm.get('left_eye_x', None)
+            olho_esquerdo_y = dict_lm.get('left_eye_y', None)
 
-            ponto_medio_ombros_x = (ombro_esquerdo_x + ombro_direito_x) / 2
-            
-            TOLERANCIA_DESLOCAMENTO_HORIZONTAL = 0.05
-            
-            deslocamento_x = abs(nariz_x - ponto_medio_ombros_x)
-
-            if (self.position_validation(dict_lm, 'shoulder') is False):
-                self.consecutive_head_error_counter = 0
+            # Se não tiver left_eye, calcula pelo nariz e ombros (fallback)
+            if olho_esquerdo_x is not None and olho_esquerdo_y is not None:
+                dx = olho_direito_x - olho_esquerdo_x
+                dy = olho_direito_y - olho_esquerdo_y
             else:
-                if deslocamento_x > TOLERANCIA_DESLOCAMENTO_HORIZONTAL:
-                    self.consecutive_head_error_counter += 1
-                    hp_status = 1
-                else:
-                    self.consecutive_head_error_counter = 0
+                # Fallback: usa ombros
+                ombro_esquerdo_x = dict_lm['left_shoulder_x']
+                ombro_esquerdo_y = dict_lm.get('left_shoulder_y', 0)
+                ombro_direito_x = dict_lm['right_shoulder_x']
+                ombro_direito_y = dict_lm.get('right_shoulder_y', 0)
+                dx = ombro_direito_x - ombro_esquerdo_x
+                dy = ombro_direito_y - ombro_esquerdo_y
+
+            angulo_rad = math.atan2(dy, dx)
+            angulo_graus = abs(math.degrees(angulo_rad))
+
+            # O ideal é que a linha dos olhos esteja em 0° (horizontal)
+            # Se o ângulo for maior que 5°, considera erro
+            TOLERANCIA_ANGULO = 5
+            if min(abs(angulo_graus), abs(angulo_graus - 180)) > TOLERANCIA_ANGULO:
+                self.consecutive_head_error_counter += 1
+                hp_status = 1
+            else:
+                self.consecutive_head_error_counter = 0
 
             if self.consecutive_head_error_counter >= self.HEAD_ERROR_THRESHOLD:
                 self.total_head_error_counter += 1
                 self.consecutive_head_error_counter = 0
 
         except Exception as e:
-            print(f"Erro no cálculo alternativo da cabeça: {e}")
+            print(f"Erro no cálculo do alinhamento da cabeça: {e}")
             self.consecutive_head_error_counter = 0
-            
+        
         return hp_status
 
     def _check_trunk_flexion_error(self, dict_lm):
@@ -217,7 +238,7 @@ class SquatRepetitionAnalyzer:
             tibia_angle_deg = abs(math.degrees(tibia_angle_rad))
 
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or self.position_validation(dict_lm, 'hip') is False or self.position_validation(dict_lm, 'shoulder') is False):
-                self.consecutive_trunk_error_counter = 0
+                print("Os pontos para o cálculo do TRONCO estão marcados incorretamente.")
             else:
                 if (trunk_angle_deg < tibia_angle_deg + TOLERANCIA_ANGULO):
                     self.consecutive_trunk_error_counter += 1
@@ -240,7 +261,7 @@ class SquatRepetitionAnalyzer:
             allowed_forward_translation = foot_length_x * 0.30
             
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False):
-                self.consecutive_knee_error_counter = 0
+                print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
             else:
                 if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:
                     self.consecutive_knee_error_counter += 1
@@ -257,18 +278,22 @@ class SquatRepetitionAnalyzer:
         return kn_status
 
     def _check_heel_lift_error(self, dict_lm):
-        """
-        MODIFICADO: Verifica o erro de elevação do calcanhar com uma tolerância
-        para ignorar flutuações sutis no rastreamento.
-        """
         hl_status = 0
         try:
+            posicao_x_calcanhar = dict_lm["right_heel_x"]
             posicao_y_calcanhar = dict_lm["right_heel_y"]
+            posicao_x_tornozelo = dict_lm["right_ankle_x"]
 
-            if (self.position_validation(dict_lm, 'heel') is False):
-                self.consecutive_foot_error_counter = 0
+            # Verifica se o calcanhar está mais alto que o inicial
+            # E se o tornozelo avançou no eixo x em relação à posição inicial
+            avancou_tornozelo = posicao_x_tornozelo > self.ankle_x_inicial + 0 # ? Esse valor ainda precisa ser ajustado
+            # ? Essa função do avancou_calcanhar ainda está sendo testada
+            avancou_calcanhar = posicao_x_calcanhar < self.heel_x_inicial - 0.01 or posicao_x_calcanhar > self.heel_x_inicial + 0.01
+
+            if (self.position_validation(dict_lm, 'heel') is False and self.position_validation(dict_lm, 'ankle') is False):
+                print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
             else:
-                if posicao_y_calcanhar < self.heel_y_inicial:
+                if posicao_y_calcanhar < self.heel_y_inicial and (avancou_tornozelo or avancou_calcanhar):
                     self.consecutive_foot_error_counter += 1
                     hl_status = 1
                 else:
@@ -282,21 +307,16 @@ class SquatRepetitionAnalyzer:
             self.consecutive_foot_error_counter = 0
         return hl_status
 
-    def _check_errors(self, lm_obj):
+    def _check_errors(self, dict_lm):
         hp_status = tr_status = hl_status = kn_status = 0
 
         if self.current_phase in ['descendo', 'subindo']:
-            try:
-                dict_lm = self.create_dictionary_landmarks(lm_obj)
-            except Exception as e:
-                print(f"Erro ao acessar landmarks essenciais para cálculo de erros: {e}. Análise de erros ignorada para este frame.")
-                return hp_status, tr_status, hl_status, kn_status
             
             hp_status = self._check_head_posture_error(dict_lm)
             tr_status = self._check_trunk_flexion_error(dict_lm)
             kn_status = self._check_knee_translation_error(dict_lm)
             hl_status = self._check_heel_lift_error(dict_lm)
-         
+        
         return hp_status, tr_status, hl_status, kn_status
 
     def _reset_error_counters(self):

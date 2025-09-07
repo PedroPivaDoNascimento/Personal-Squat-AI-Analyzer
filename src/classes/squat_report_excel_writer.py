@@ -10,7 +10,7 @@ class SquatReportExcelWriter:
         Args:
             person_name (str): O nome da pessoa para o relatório. Este será o nome do arquivo Excel.
             squat_analyzer_instance (SquatRepetitionAnalyzer): A instância do analisador de agachamento,
-                                                               contendo todos os dados de análise (históricos de erros, DataFrames de desvio, etc.).
+            contendo todos os dados de análise (históricos de erros, DataFrames de desvio, etc.).
         """
         self.person_name = person_name
         self.analyzer = squat_analyzer_instance 
