@@ -40,7 +40,7 @@ Siga estes passos para configurar e executar o projeto localmente:
 
 1.  Execute o script principal para iniciar a análise (o nome do arquivo pode variar, verifique o seu repositório):
     ```bash
-    python nome_do_seu_arquivo.py
+    streamlit run src/main.py
     ```
 2.  Siga as instruções na tela. O aplicativo deve abrir uma janela para capturar a imagem da sua webcam ou solicitar um arquivo de vídeo.
 
