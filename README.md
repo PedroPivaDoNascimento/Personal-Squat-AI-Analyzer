@@ -11,7 +11,7 @@ Este é um aplicativo de visão computacional em tempo real que utiliza intelig�
   - Joelhos que se projetam para a frente além dos dedos dos pés.
   - Costas arredondadas.
   - Calcanhares se levantando do chão.
-- **Compatibilidade:** Suporta análise via webcam ao vivo ou de um arquivo de vídeo pré-gravado.
+- **Compatibilidade:** Suporta análise de um arquivo de vídeo pré-gravado.
 
 ## 💻 Tecnologias Utilizadas
 
