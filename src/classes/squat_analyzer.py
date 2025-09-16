@@ -1,15 +1,13 @@
 import math
 import numpy as np
-from mediapipe import solutions
+
+
+# TODO Otimizar a parte do calculo dos erros quando da um falso positivo
+# TODO Após concertar os limites, trabalhar na organização do código
+# TODO Adicionar o novo falso positivo no calcanhar
 
 class SquatRepetitionAnalyzer:
-    def __init__(self,
-                 descent_threshold=0.05,
-                 ascent_return_threshold=0.02,
-                 trunk_error_threshold=5,
-                 knee_error_threshold=5,
-                 head_error_threshold=5,
-                 foot_error_threshold=5,):
+    def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5,):
         
         self.DESCENT_THRESHOLD = descent_threshold
         self.ASCENT_RETURN_THRESHOLD = ascent_return_threshold
@@ -34,6 +32,8 @@ class SquatRepetitionAnalyzer:
         self.showlder_x_history = []
         self.hip_x_inicial = None
         self.hip_x_history = []
+        self.heel_z_inicial = None
+        self.heel_z_history = []
 
         self.repetitions_detected = 0
         self.current_phase = 'inicial'
@@ -82,15 +82,16 @@ class SquatRepetitionAnalyzer:
         showlder_x = dict_lm['right_shoulder_x']
         hip_x = dict_lm['right_hip_x']
         knee_x = dict_lm['right_knee_x']
+        ankle_x = dict_lm['right_ankle_x']
+        heel_z = dict_lm['right_heel_z']  # ? Ainda não sei se vou usar essa variável
+
         
-        if self.ear_y_inicial is None and self.heel_y_inicial is None and self.knee_x_inicial is None and self.ankle_x_inicial is None:
+        if self.ear_y_inicial is None:
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
                 
                 # Calibra o "chão" usando o valor MÁXIMO da posição Y
                 # para pegar o ponto mais baixo e estável do calcanhar.
-
-                # TODO: Testar de seria melhor usar a mediana ou a média dos 3 maiores valores ou fazer a média ignorando os valores extremos, visando corrigir os erros dos falsos positivos
 
                 self.heel_y_inicial = np.max(self.heel_y_history[-10:])
                 
@@ -99,14 +100,16 @@ class SquatRepetitionAnalyzer:
                 self.heel_x_inicial = np.mean(self.heel_x_history[-10:])
                 self.showlder_x_inicial = np.mean(self.showlder_x_history[-10:])
                 self.hip_x_inicial = np.mean(self.hip_x_history[-10:])
+                self.heel_z_inicial = np.mean(self.heel_z_history[-10:])
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y)
                 self.knee_x_history.append(knee_x)
-                self.ankle_x_history.append(heel_y)
+                self.ankle_x_history.append(ankle_x)
                 self.heel_x_history.append(heel_x)
                 self.showlder_x_history.append(showlder_x)
                 self.hip_x_history.append(hip_x)
+                self.heel_z_history.append(heel_z)
                 return
         
         self.ear_y_history.append(ear_y)
@@ -157,7 +160,8 @@ class SquatRepetitionAnalyzer:
                 'right_big_toe_y': lm_obj[32].y,
                 'right_heel_y': lm_obj[30].y,
                 'nose_x': lm_obj[0].x,
-                'nose_y': lm_obj[0].y
+                'nose_y': lm_obj[0].y,
+                'right_heel_z': lm_obj[30].z,
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -165,19 +169,19 @@ class SquatRepetitionAnalyzer:
 
     def position_validation(self, dict_lm, name_body_part):
         if name_body_part == 'ankle':
-            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.45:
+            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.1:
                 return False
         elif name_body_part == 'knee':
-            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.45:
+            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.1:
                 return False
         elif name_body_part == 'heel':
-            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.1:   # ? Rever esse limite
+            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.025:   
                 return False
         elif name_body_part == 'shoulder':
-            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.45:
+            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.1:
                 return False
         elif name_body_part == 'hip':
-            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.45:
+            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.1:
                 return False
         else:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
@@ -229,18 +233,18 @@ class SquatRepetitionAnalyzer:
 
     def _check_trunk_flexion_error(self, dict_lm):
         tr_status = 0
-        TOLERANCIA_ANGULO = 5
+        TOLERANCIA_ANGULO = 14 # Por enquanto isso está definido
         try:
             trunk_angle_rad = math.atan2(dict_lm['right_hip_y'] - dict_lm['right_shoulder_y'], dict_lm["right_hip_x"] - dict_lm['right_shoulder_x'])
             trunk_angle_deg = abs(math.degrees(trunk_angle_rad))
             
             tibia_angle_rad = math.atan2(dict_lm['right_ankle_y'] - dict_lm['right_knee_y'], dict_lm['right_ankle_x'] - dict_lm['right_knee_x'])
             tibia_angle_deg = abs(math.degrees(tibia_angle_rad))
-
+            
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or self.position_validation(dict_lm, 'hip') is False or self.position_validation(dict_lm, 'shoulder') is False):
                 print("Os pontos para o cálculo do TRONCO estão marcados incorretamente.")
             else:
-                if (trunk_angle_deg < tibia_angle_deg + TOLERANCIA_ANGULO):
+                if (trunk_angle_deg + TOLERANCIA_ANGULO < tibia_angle_deg):
                     self.consecutive_trunk_error_counter += 1
                     tr_status = 1
                 else:
@@ -284,11 +288,13 @@ class SquatRepetitionAnalyzer:
             posicao_y_calcanhar = dict_lm["right_heel_y"]
             posicao_x_tornozelo = dict_lm["right_ankle_x"]
 
+            #print(f"Tornozelo X: {posicao_x_tornozelo:.4f}, Calcanhar X: {posicao_x_calcanhar:.4f}, Calcanhar Y: {posicao_y_calcanhar:.4f}")
+
             # Verifica se o calcanhar está mais alto que o inicial
             # E se o tornozelo avançou no eixo x em relação à posição inicial
-            avancou_tornozelo = posicao_x_tornozelo > self.ankle_x_inicial + 0 # ? Esse valor ainda precisa ser ajustado
+            avancou_tornozelo = posicao_x_tornozelo > self.ankle_x_inicial + 0.1 # ? Esse valor ainda precisa ser ajustado
             # ? Essa função do avancou_calcanhar ainda está sendo testada
-            avancou_calcanhar = posicao_x_calcanhar < self.heel_x_inicial - 0.01 or posicao_x_calcanhar > self.heel_x_inicial + 0.01
+            avancou_calcanhar = abs(posicao_x_calcanhar - self.heel_x_inicial) > 0.01
 
             if (self.position_validation(dict_lm, 'heel') is False and self.position_validation(dict_lm, 'ankle') is False):
                 print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
@@ -306,7 +312,7 @@ class SquatRepetitionAnalyzer:
             print(f"Erro específico no cálculo do calcanhar: {e}")
             self.consecutive_foot_error_counter = 0
         return hl_status
-
+    
     def _check_errors(self, dict_lm):
         hp_status = tr_status = hl_status = kn_status = 0
 

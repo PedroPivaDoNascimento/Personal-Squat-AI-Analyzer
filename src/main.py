@@ -19,21 +19,16 @@ def setup_app_ui():
     name_input = st.text_input('Nome da pessoa')
     uploaded_file = st.file_uploader('Envie o vídeo (Sagital Direita)', type=['mp4', 'avi', 'mov'])
 
-    # Não diminur os seguintes valores: tronco, cabeça
-    # TODO: Testar os valores para os limites de sensibilidade de desvio 
-
-    # Parei no vídeo 27
-
     st.write('### Parâmetros de Avaliação do Exercício')
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 100, 49, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
-        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 100, 45, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
+        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
+        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 150, 72, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
-        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 100, 5, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
-        foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 100, 5, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
+        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
+        foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
 
     params = {
         'descent_threshold': descent_th,
