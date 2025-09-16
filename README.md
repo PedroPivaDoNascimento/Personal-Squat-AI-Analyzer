@@ -44,10 +44,6 @@ Siga estes passos para configurar e executar o projeto localmente:
     ```
 2.  Coloque o nome da planilha que será gerada com os resultados e o vídeo que será processado.
 
-## 📜 Licença
-
-Este projeto está licenciado sob a Licença MIT.
-
 ## 📬 Contato
 
-Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em [Seu e-mail ou link de contato].
+Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em pedropiva9@gmail.com.
