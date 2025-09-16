@@ -42,7 +42,7 @@ Siga estes passos para configurar e executar o projeto localmente:
     ```bash
     streamlit run src/main.py
     ```
-2.  Siga as instruções na tela. O aplicativo deve abrir uma janela para capturar a imagem da sua webcam ou solicitar um arquivo de vídeo.
+2.  Coloque o nome da planilha que será gerada com os resultados e o vídeo que será processado.
 
 ## 📜 Licença
 
