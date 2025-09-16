@@ -18,6 +18,7 @@ Este é um aplicativo de visão computacional em tempo real que utiliza intelig�
 - **Python:** Linguagem de programação principal.
 - **OpenCV:** Biblioteca de visão computacional para processamento de vídeo e imagem.
 - **MediaPipe:** Framework do Google para detecção de pontos de referência do corpo humano (pose estimation).
+- **Streamlit:** Framework para criar aplicações web interativas.
 
 ## 🚀 Instalação
 
@@ -25,20 +26,30 @@ Siga estes passos para configurar e executar o projeto localmente:
 
 1.  Clone o repositório:
     ```bash
-    git clone [https://github.com/PedroPivaDoNascimento/Personal-Squat-AI-Analyzer.git](https://github.com/PedroPivaDoNascimento/Personal-Squat-AI-Analyzer.git)
+    git clone https://github.com/PedroPivaDoNascimento/Personal-Squat-AI-Analyzer.git
     ```
 2.  Navegue até o diretório do projeto:
     ```bash
     cd Personal-Squat-AI-Analyzer
     ```
-3.  Instale as dependências necessárias. Recomenda-se o uso de um ambiente virtual.
+3.  (Opcional, mas recomendado) Crie e ative um ambiente virtual:
+    ```bash
+    # Linux/MacOS
+    python3 -m venv venv
+    source venv/bin/activate
+
+    # Windows (PowerShell)
+    python -m venv venv
+    venv\Scripts\Activate
+    ```
+4.  Instale as dependências necessárias:
     ```bash
     pip install -r requirements.txt
     ```
 
 ## 🏃 Como usar
 
-1.  Execute o script principal para iniciar a análise (o nome do arquivo pode variar, verifique o seu repositório):
+1.  Execute o script principal para iniciar a análise:
     ```bash
     streamlit run src/main.py
     ```
@@ -46,4 +57,4 @@ Siga estes passos para configurar e executar o projeto localmente:
 
 ## 📬 Contato
 
-Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em pedropiva9@gmail.com.
+Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em **pedropiva9@gmail.com**.
