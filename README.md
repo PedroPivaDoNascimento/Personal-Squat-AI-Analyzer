@@ -57,4 +57,4 @@ Siga estes passos para configurar e executar o projeto localmente:
 
 ## 📬 Contato
 
-Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em **pedropiva9@gmail.com**.
+Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para entrar em contato comigo em **pedropiva9@gmail.com**.
