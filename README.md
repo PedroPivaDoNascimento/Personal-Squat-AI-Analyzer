@@ -1,0 +1,53 @@
+# Personal Squat AI Analyzer
+
+Este é um aplicativo de visão computacional em tempo real que utiliza inteligência artificial para analisar a forma de agachamento de um usuário, fornecendo feedback instantâneo para ajudar a prevenir lesões e melhorar a técnica.
+
+## 🌟 Recursos
+
+- **Análise em Tempo Real:** Processa quadros de vídeo em tempo real para feedback instantâneo sobre a forma.
+- **Detecção de Postura:** Utiliza modelos de IA para detectar pontos-chave do corpo e calcular ângulos de articulação.
+- **Contador de Repetições:** Conta automaticamente o número de agachamentos concluídos.
+- **Feedback de Forma:** Fornece alertas para problemas comuns, como:
+  - Joelhos que se projetam para a frente além dos dedos dos pés.
+  - Costas arredondadas.
+  - Calcanhares se levantando do chão.
+- **Compatibilidade:** Suporta análise via webcam ao vivo ou de um arquivo de vídeo pré-gravado.
+
+## 💻 Tecnologias Utilizadas
+
+- **Python:** Linguagem de programação principal.
+- **OpenCV:** Biblioteca de visão computacional para processamento de vídeo e imagem.
+- **MediaPipe:** Framework do Google para detecção de pontos de referência do corpo humano (pose estimation).
+
+## 🚀 Instalação
+
+Siga estes passos para configurar e executar o projeto localmente:
+
+1.  Clone o repositório:
+    ```bash
+    git clone [https://github.com/PedroPivaDoNascimento/Personal-Squat-AI-Analyzer.git](https://github.com/PedroPivaDoNascimento/Personal-Squat-AI-Analyzer.git)
+    ```
+2.  Navegue até o diretório do projeto:
+    ```bash
+    cd Personal-Squat-AI-Analyzer
+    ```
+3.  Instale as dependências necessárias. Recomenda-se o uso de um ambiente virtual.
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 🏃 Como usar
+
+1.  Execute o script principal para iniciar a análise (o nome do arquivo pode variar, verifique o seu repositório):
+    ```bash
+    python nome_do_seu_arquivo.py
+    ```
+2.  Siga as instruções na tela. O aplicativo deve abrir uma janela para capturar a imagem da sua webcam ou solicitar um arquivo de vídeo.
+
+## 📜 Licença
+
+Este projeto está licenciado sob a Licença MIT.
+
+## 📬 Contato
+
+Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para abrir uma issue neste repositório ou entrar em contato comigo em [Seu e-mail ou link de contato].
