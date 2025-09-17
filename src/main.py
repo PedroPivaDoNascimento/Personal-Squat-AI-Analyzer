@@ -8,6 +8,8 @@ from classes.squat_report_excel_writer import SquatReportExcelWriter
 
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
+# TODO Quando eu tiver mais tempo vou reorganizar os diretórios dentro do código
+
 def setup_app_ui(): 
     """
     Configura a interface do usuário do Streamlit, incluindo título,
@@ -19,11 +21,12 @@ def setup_app_ui():
     name_input = st.text_input('Nome da pessoa')
     uploaded_file = st.file_uploader('Envie o vídeo (Sagital Direita)', type=['mp4', 'avi', 'mov'])
 
+    # Tronco < 4
     st.write('### Parâmetros de Avaliação do Exercício')
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
+        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
         head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 150, 72, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")

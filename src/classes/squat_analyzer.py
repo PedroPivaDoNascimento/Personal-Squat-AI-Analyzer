@@ -1,10 +1,12 @@
 import math
 import numpy as np
 
-
-# TODO Otimizar a parte do calculo dos erros quando da um falso positivo
+# TODO Remover pontos que não estão sendo mais usados (heel_z, ankle_z, etc)
 # TODO Após concertar os limites, trabalhar na organização do código
 # TODO Adicionar o novo falso positivo no calcanhar
+# TODO Testar nova função de cálculo do tronco
+
+from .vector_calculator import VectorCalculator
 
 class SquatRepetitionAnalyzer:
     def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5,):
@@ -93,7 +95,7 @@ class SquatRepetitionAnalyzer:
                 # Calibra o "chão" usando o valor MÁXIMO da posição Y
                 # para pegar o ponto mais baixo e estável do calcanhar.
 
-                self.heel_y_inicial = np.max(self.heel_y_history[-10:])
+                self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
                 self.ankle_x_inicial = np.mean(self.ankle_x_history[-10:])
@@ -231,7 +233,8 @@ class SquatRepetitionAnalyzer:
         
         return hp_status
 
-    def _check_trunk_flexion_error(self, dict_lm):
+# TODO Funão antiga apagar quando a nova iplementação estiver testada e funcionando
+#    def _check_trunk_flexion_error(self, dict_lm):
         tr_status = 0
         TOLERANCIA_ANGULO = 14 # Por enquanto isso está definido
         try:
@@ -258,6 +261,52 @@ class SquatRepetitionAnalyzer:
             self.consecutive_trunk_error_counter = 0
         return tr_status
 
+    def _check_trunk_flexion_error(self, dict_lm):
+        tr_status = 0
+        # Tolerancia < 100
+        TOLERANCIA_PONTO_MAXIMO = 90 # ? Continuar testando esse valor
+        # Tolerância ?
+        TOLERANCIA_PONTO = 1 # ? Continuar testando esse valor
+
+        try:
+            right_hip_x = dict_lm['right_hip_x']
+            right_hip_y = dict_lm['right_hip_y']
+            right_shoulder_x = dict_lm['right_shoulder_x']
+            right_shoulder_y = dict_lm['right_shoulder_y']
+            right_ankle_x = dict_lm['right_ankle_x']
+            right_ankle_y = dict_lm['right_ankle_y']
+            right_knee_x = dict_lm['right_knee_x']
+            right_knee_y = dict_lm['right_knee_y']
+
+            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or self.position_validation(dict_lm, 'hip') is False or self.position_validation(dict_lm, 'shoulder') is False):
+                #print("Os pontos para o cálculo do TRONCO estão marcados incorretamente.")
+                return tr_status
+
+            # Pegando a equação da reta do tronco e da tíbia
+            line_equation_trunk = VectorCalculator.get_line_equation(right_hip_x, right_hip_y, right_shoulder_x, right_shoulder_y)
+            line_equation_tibia = VectorCalculator.get_line_equation(right_ankle_x, right_ankle_y, right_knee_x, right_knee_y)
+
+            # Encontrando o ponto de interseção entre as duas retas
+            intersection_point = VectorCalculator.find_line_intersection(line_equation_trunk, line_equation_tibia)
+            if intersection_point is None:
+                return tr_status  # Retas paralelas, não há interseção
+            
+            if ((intersection_point[0] < TOLERANCIA_PONTO_MAXIMO) and ((intersection_point[0]- TOLERANCIA_PONTO) > max(right_hip_x, right_shoulder_x) or (intersection_point[0] - TOLERANCIA_PONTO) > max(right_ankle_x, right_knee_x))):
+                print(f"O ponto de interseção equivale esta x: {intersection_point[0]:.4f}")
+                print(f"A distância entre o ponto de interseção e ponto máximo das retas é de {abs(intersection_point[0] - max(right_hip_x, right_shoulder_x)):.4f} no tronco e {abs(intersection_point[0] - max(right_ankle_x, right_knee_x)):.4f} na tíbia.")
+                self.consecutive_trunk_error_counter += 1
+                tr_status = 1
+            else:
+                self.consecutive_trunk_error_counter = 0
+
+            if self.consecutive_trunk_error_counter >= self.TRUNK_ERROR_THRESHOLD:
+                self.total_trunk_error_counter += 1
+                self.consecutive_trunk_error_counter = 0
+        except Exception as e:
+            print(f"Erro específico no cálculo do tronco: {e}")
+            self.consecutive_trunk_error_counter = 0
+        return tr_status
+    
     def _check_knee_translation_error(self, dict_lm):
         kn_status = 0
         try:
@@ -265,13 +314,14 @@ class SquatRepetitionAnalyzer:
             allowed_forward_translation = foot_length_x * 0.30
             
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False):
-                print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
+                #print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
+                return kn_status
+    
+            if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:
+                self.consecutive_knee_error_counter += 1
+                kn_status = 1
             else:
-                if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:
-                    self.consecutive_knee_error_counter += 1
-                    kn_status = 1
-                else:
-                    self.consecutive_knee_error_counter = 0
+                self.consecutive_knee_error_counter = 0
                     
             if self.consecutive_knee_error_counter >= self.KNEE_ERROR_THRESHOLD:
                 self.total_knee_error_counter += 1
@@ -297,14 +347,15 @@ class SquatRepetitionAnalyzer:
             avancou_calcanhar = abs(posicao_x_calcanhar - self.heel_x_inicial) > 0.01
 
             if (self.position_validation(dict_lm, 'heel') is False and self.position_validation(dict_lm, 'ankle') is False):
-                print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
+                #print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
+                return hl_status
+
+            if posicao_y_calcanhar < self.heel_y_inicial and (avancou_tornozelo or avancou_calcanhar):
+                self.consecutive_foot_error_counter += 1
+                hl_status = 1
             else:
-                if posicao_y_calcanhar < self.heel_y_inicial and (avancou_tornozelo or avancou_calcanhar):
-                    self.consecutive_foot_error_counter += 1
-                    hl_status = 1
-                else:
-                    self.consecutive_foot_error_counter = 0
-            
+                self.consecutive_foot_error_counter = 0
+        
             if self.consecutive_foot_error_counter >= self.FOOT_ERROR_THRESHOLD:
                 self.total_foot_error_counter += 1
                 self.consecutive_foot_error_counter = 0
