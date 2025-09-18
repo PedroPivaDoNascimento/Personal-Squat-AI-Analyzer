@@ -9,6 +9,7 @@ from classes.squat_report_excel_writer import SquatReportExcelWriter
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
 # TODO Quando eu tiver mais tempo vou reorganizar os diretórios dentro do código
+# TODO Adiconar a altura do usário nas funções que faltam
 
 def setup_app_ui(): 
     """
@@ -19,9 +20,9 @@ def setup_app_ui():
 
     st.title('Análise Sagital Direita - Agachamento')
     name_input = st.text_input('Nome da pessoa')
+    user_height_cm = st.number_input("Sua Altura em centímetros", min_value=100, max_value=250, value=170)
     uploaded_file = st.file_uploader('Envie o vídeo (Sagital Direita)', type=['mp4', 'avi', 'mov'])
 
-    # Tronco < 4
     st.write('### Parâmetros de Avaliação do Exercício')
     col_param1, col_param2 = st.columns(2)
     with col_param1:
@@ -41,9 +42,9 @@ def setup_app_ui():
         'head_error_threshold': head_err_th,
         'foot_error_threshold': foot_err_th
     }
-    return name_input, uploaded_file, params
+    return name_input, user_height_cm, uploaded_file, params
 
-def process_and_analyze_video(uploaded_file, name_input, params):
+def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params):
     """
     Salva o vídeo temporariamente, inicializa a IA e processa o vídeo.
     Retorna a instância do PersonalAI após a análise.
@@ -216,11 +217,11 @@ def display_data_frames(ai):
         st.markdown("---") # Separador visual entre os DataFrames
 
 if __name__ == "__main__":
-    name_input, uploaded_file, params = setup_app_ui()
+    name_input, user_height_cm, uploaded_file, params = setup_app_ui()
 
     #Processa o vídeo se um arquivo for enviado e um nome for fornecido
-    if uploaded_file and name_input:
-        ai_instance = process_and_analyze_video(uploaded_file, name_input, params)
+    if uploaded_file and name_input and user_height_cm:
+        ai_instance = process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
         
         # Exibir o resumo geral
         display_overall_summary(ai_instance.squat_analyzer, name_input)

@@ -1,7 +1,6 @@
 import math
 import numpy as np
 
-# TODO Remover pontos que não estão sendo mais usados (heel_z, ankle_z, etc)
 # TODO Após concertar os limites, trabalhar na organização do código
 # TODO Adicionar o novo falso positivo no calcanhar
 # TODO Testar nova função de cálculo do tronco
@@ -25,17 +24,21 @@ class SquatRepetitionAnalyzer:
         self.heel_y_history = []
 
         self.ankle_x_inicial = None
+        self.ankle_y_inicial = None
         self.ankle_x_history = []
+        self.ankle_y_history = []
         self.knee_x_inicial = None
+        self.knee_y_inicial = None
         self.knee_x_history = []
+        self.knee_y_history = []
         self.heel_x_inicial = None
         self.heel_x_history = []
         self.showlder_x_inicial = None
         self.showlder_x_history = []
         self.hip_x_inicial = None
         self.hip_x_history = []
-        self.heel_z_inicial = None
-        self.heel_z_history = []
+
+        self.tibia_length = None  # Comprimento da tíbia, calculado após a calibração
 
         self.repetitions_detected = 0
         self.current_phase = 'inicial'
@@ -84,34 +87,43 @@ class SquatRepetitionAnalyzer:
         showlder_x = dict_lm['right_shoulder_x']
         hip_x = dict_lm['right_hip_x']
         knee_x = dict_lm['right_knee_x']
+        knee_y = dict_lm['right_knee_y']
         ankle_x = dict_lm['right_ankle_x']
-        heel_z = dict_lm['right_heel_z']  # ? Ainda não sei se vou usar essa variável
-
+        ankle_y = dict_lm['right_ankle_y']
         
         if self.ear_y_inicial is None:
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
                 
-                # Calibra o "chão" usando o valor MÁXIMO da posição Y
+                # Calibra o "chão" usando o valor MÉDIO da posição Y
                 # para pegar o ponto mais baixo e estável do calcanhar.
 
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
+                self.knee_y_inicial = np.mean(self.knee_y_history[-10:])
                 self.ankle_x_inicial = np.mean(self.ankle_x_history[-10:])
+                self.ankle_y_inicial = np.mean(self.ankle_y_history[-10:])
                 self.heel_x_inicial = np.mean(self.heel_x_history[-10:])
                 self.showlder_x_inicial = np.mean(self.showlder_x_history[-10:])
                 self.hip_x_inicial = np.mean(self.hip_x_history[-10:])
-                self.heel_z_inicial = np.mean(self.heel_z_history[-10:])
+
+                self.tibia_length = VectorCalculator.calculate_distance(
+                    self.knee_x_inicial, self.knee_y_inicial,
+                    self.ankle_x_inicial, self.ankle_y_inicial
+                )
+
+
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y)
                 self.knee_x_history.append(knee_x)
+                self.knee_y_history.append(knee_y)
                 self.ankle_x_history.append(ankle_x)
+                self.ankle_y_history.append(ankle_y)
                 self.heel_x_history.append(heel_x)
                 self.showlder_x_history.append(showlder_x)
                 self.hip_x_history.append(hip_x)
-                self.heel_z_history.append(heel_z)
                 return
         
         self.ear_y_history.append(ear_y)
@@ -145,7 +157,9 @@ class SquatRepetitionAnalyzer:
                 'left_shoulder_x': lm_obj[11].x,
                 'right_hip_x': lm_obj[24].x,
                 'right_knee_x': lm_obj[26].x,
+                'right_knee_y': lm_obj[26].y,
                 'right_ankle_x': lm_obj[28].x,
+                'right_ankle_y': lm_obj[28].y,
                 'right_eye_x': lm_obj[5].x,
                 'left_eye_x': lm_obj[2].x,      
                 'right_ear_x': lm_obj[7].x,
@@ -163,7 +177,6 @@ class SquatRepetitionAnalyzer:
                 'right_heel_y': lm_obj[30].y,
                 'nose_x': lm_obj[0].x,
                 'nose_y': lm_obj[0].y,
-                'right_heel_z': lm_obj[30].z,
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -263,10 +276,7 @@ class SquatRepetitionAnalyzer:
 
     def _check_trunk_flexion_error(self, dict_lm):
         tr_status = 0
-        # Tolerancia < 100
-        TOLERANCIA_PONTO_MAXIMO = 90 # ? Continuar testando esse valor
-        # Tolerância ?
-        TOLERANCIA_PONTO = 1 # ? Continuar testando esse valor
+
 
         try:
             right_hip_x = dict_lm['right_hip_x']
@@ -291,9 +301,9 @@ class SquatRepetitionAnalyzer:
             if intersection_point is None:
                 return tr_status  # Retas paralelas, não há interseção
             
-            if ((intersection_point[0] < TOLERANCIA_PONTO_MAXIMO) and ((intersection_point[0]- TOLERANCIA_PONTO) > max(right_hip_x, right_shoulder_x) or (intersection_point[0] - TOLERANCIA_PONTO) > max(right_ankle_x, right_knee_x))):
-                print(f"O ponto de interseção equivale esta x: {intersection_point[0]:.4f}")
-                print(f"A distância entre o ponto de interseção e ponto máximo das retas é de {abs(intersection_point[0] - max(right_hip_x, right_shoulder_x)):.4f} no tronco e {abs(intersection_point[0] - max(right_ankle_x, right_knee_x)):.4f} na tíbia.")
+            if ((intersection_point[0] > max(right_hip_x, right_shoulder_x)) or (intersection_point[0] > max(right_ankle_x, right_knee_x))):
+                print(f"Tamanho da tíbia: {self.tibia_length:.4f}")
+                print(f"Ponto de interseção: {intersection_point[0]:.4f}, {intersection_point[1]:.4f}")
                 self.consecutive_trunk_error_counter += 1
                 tr_status = 1
             else:
