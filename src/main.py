@@ -61,7 +61,7 @@ def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
 
     # Inicializa a classe PersonalAI com os parâmetros do usuário
     ai = PersonalAI(
-        temp_path, name_input, MODEL_PATH,
+        temp_path, name_input, user_height_cm, MODEL_PATH,
         **params # Desempacota o dicionário de parâmetros
     )
     # Processa o vídeo. draw=True e display=True são para visualização durante o processo.
@@ -194,7 +194,8 @@ def display_data_frames(ai):
         "Desvios da Cabeça": ai.head_df,
         "Desvios do Tronco": ai.trunk_df,
         "Desvios do Calcanhar": ai.heel_df,
-        "Desvios do Joelho": ai.knee_df
+        "Desvios do Joelho": ai.knee_df,
+        "Pontos de Interseção do Tronco": ai.squat_analyzer.trunk_intersections_df
     }
 
     # Itera sobre cada DataFrame para processar e exibir

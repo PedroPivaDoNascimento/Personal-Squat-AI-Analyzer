@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import pandas as pd
 
 # TODO Após concertar os limites, trabalhar na organização do código
 # TODO Adicionar o novo falso positivo no calcanhar
@@ -8,7 +9,7 @@ import numpy as np
 from .vector_calculator import VectorCalculator
 
 class SquatRepetitionAnalyzer:
-    def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5,):
+    def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5, user_height_cm=170):
         
         self.DESCENT_THRESHOLD = descent_threshold
         self.ASCENT_RETURN_THRESHOLD = ascent_return_threshold
@@ -16,6 +17,9 @@ class SquatRepetitionAnalyzer:
         self.KNEE_ERROR_THRESHOLD = knee_error_threshold
         self.HEAD_ERROR_THRESHOLD = head_error_threshold
         self.FOOT_ERROR_THRESHOLD = foot_error_threshold
+
+        self.user_height_cm = user_height_cm
+        self.scale_factor_cm = None
 
         self.ear_y_inicial = None
         self.ear_y_history = []
@@ -38,7 +42,7 @@ class SquatRepetitionAnalyzer:
         self.hip_x_inicial = None
         self.hip_x_history = []
 
-        self.tibia_length = None  # Comprimento da tíbia, calculado após a calibração
+        self.tibia_length_cm = None  # Comprimento da tíbia, calculado após a calibração
 
         self.repetitions_detected = 0
         self.current_phase = 'inicial'
@@ -62,21 +66,69 @@ class SquatRepetitionAnalyzer:
         self.reps = {'head': [], 'trunk': [], 'heel': [], 'knee': []}
 
         self.repetition_timestamps = []
+
+        self.trunk_intersections_df = pd.DataFrame(columns=[
+            'Tempo (ms)', 
+            'Comprimento Tíbia (cm)', 
+            'Ponto Interseção X', 
+            'Ponto Interseção Y'
+        ])
         
+# Adicione ou substitua esta função na sua classe SquatRepetitionAnalyzer
+    def _calibrate_and_validate_with_height(self, dict_lm):
+        """
+        Calcula o fator de escala usando a altura real do usuário e
+        as proporções da pessoa no vídeo.
+        """
+        if self.scale_factor_cm is not None:
+            return
+
+        try:
+            # Altura da pessoa no vídeo (normalizada)
+            normalized_person_height = VectorCalculator.calculate_distance(
+                dict_lm['nose_x'], dict_lm['nose_y'],
+                dict_lm['right_heel_x'], dict_lm['right_heel_y']
+            )
+            
+            # Comprimento da tíbia no vídeo (normalizado)
+            normalized_tibia_length = VectorCalculator.calculate_distance(
+                dict_lm['right_knee_x'], dict_lm['right_knee_y'],
+                dict_lm['right_ankle_x'], dict_lm['right_ankle_y']
+            )
+
+            if normalized_person_height == 0 or normalized_tibia_length == 0:
+                print("Não foi possível calibrar. Certifique-se de que a pessoa inteira está visível.")
+                return
+
+            # 1. VALIDAÇÃO: Calcule a proporção da tíbia em relação à altura da pessoa no vídeo
+            tibia_proportion_in_video = (normalized_tibia_length / normalized_person_height)
+            #print(f"Validação: A tíbia ocupa {tibia_proportion_in_video:.2%} da altura da pessoa no vídeo.")
+
+            # 2. CALIBRAÇÃO: Calcule o comprimento real da tíbia usando sua lógica de "regra de 3"
+            self.tibia_length_cm = self.user_height_cm * tibia_proportion_in_video
+            
+            # 3. Calcule o fator de escala final
+            self.scale_factor_cm = self.tibia_length_cm / normalized_tibia_length
+
+            #print(f"Calibração finalizada. O comprimento da sua tíbia foi estimado em {estimated_real_tibia_cm:.2f} cm.")
+            #print(f"Fator de escala: {self.scale_factor_cm:.2f} cm por unidade normalizada.")
+
+        except KeyError as e:
+            print(f"Erro: Landmarks necessários para a calibração não foram encontrados: {e}")
+    
     def process_frame_landmarks(self, landmarks_obj, timestamp_ms):
         hp = tr = hl = kn = 0
         
-        if not landmarks_obj:
-            print("!!!!!!!!!!Nenhum landmark detectado.!!!!!!!!!")
-            return hp, tr, hl, kn
-
         dict_lm =  self.create_dictionary_landmarks(landmarks_obj)
+
         if dict_lm == {}:
             print("Dicionário de landmarks vazio. Análise de erros ignorada para este frame.")
             return hp, tr, hl, kn
+        
+        self._calibrate_and_validate_with_height(dict_lm)
 
         self._detect_repetition_phase(dict_lm, timestamp_ms)
-        hp, tr, hl, kn = self._check_errors(dict_lm)
+        hp, tr, hl, kn = self._check_errors(dict_lm, timestamp_ms)
         
         return hp, tr, hl, kn
 
@@ -107,12 +159,6 @@ class SquatRepetitionAnalyzer:
                 self.heel_x_inicial = np.mean(self.heel_x_history[-10:])
                 self.showlder_x_inicial = np.mean(self.showlder_x_history[-10:])
                 self.hip_x_inicial = np.mean(self.hip_x_history[-10:])
-
-                self.tibia_length = VectorCalculator.calculate_distance(
-                    self.knee_x_inicial, self.knee_y_inicial,
-                    self.ankle_x_inicial, self.ankle_y_inicial
-                )
-
 
             else:
                 self.ear_y_history.append(ear_y)
@@ -246,37 +292,8 @@ class SquatRepetitionAnalyzer:
         
         return hp_status
 
-# TODO Funão antiga apagar quando a nova iplementação estiver testada e funcionando
-#    def _check_trunk_flexion_error(self, dict_lm):
+    def _check_trunk_flexion_error(self, dict_lm, timestamp_ms):
         tr_status = 0
-        TOLERANCIA_ANGULO = 14 # Por enquanto isso está definido
-        try:
-            trunk_angle_rad = math.atan2(dict_lm['right_hip_y'] - dict_lm['right_shoulder_y'], dict_lm["right_hip_x"] - dict_lm['right_shoulder_x'])
-            trunk_angle_deg = abs(math.degrees(trunk_angle_rad))
-            
-            tibia_angle_rad = math.atan2(dict_lm['right_ankle_y'] - dict_lm['right_knee_y'], dict_lm['right_ankle_x'] - dict_lm['right_knee_x'])
-            tibia_angle_deg = abs(math.degrees(tibia_angle_rad))
-            
-            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or self.position_validation(dict_lm, 'hip') is False or self.position_validation(dict_lm, 'shoulder') is False):
-                print("Os pontos para o cálculo do TRONCO estão marcados incorretamente.")
-            else:
-                if (trunk_angle_deg + TOLERANCIA_ANGULO < tibia_angle_deg):
-                    self.consecutive_trunk_error_counter += 1
-                    tr_status = 1
-                else:
-                    self.consecutive_trunk_error_counter = 0
-
-            if self.consecutive_trunk_error_counter >= self.TRUNK_ERROR_THRESHOLD:
-                self.total_trunk_error_counter += 1
-                self.consecutive_trunk_error_counter = 0
-        except Exception as e:
-            print(f"Erro específico no cálculo do tronco: {e}")
-            self.consecutive_trunk_error_counter = 0
-        return tr_status
-
-    def _check_trunk_flexion_error(self, dict_lm):
-        tr_status = 0
-
 
         try:
             right_hip_x = dict_lm['right_hip_x']
@@ -302,10 +319,19 @@ class SquatRepetitionAnalyzer:
                 return tr_status  # Retas paralelas, não há interseção
             
             if ((intersection_point[0] > max(right_hip_x, right_shoulder_x)) or (intersection_point[0] > max(right_ankle_x, right_knee_x))):
-                print(f"Tamanho da tíbia: {self.tibia_length:.4f}")
-                print(f"Ponto de interseção: {intersection_point[0]:.4f}, {intersection_point[1]:.4f}")
+                #print(f"Tamanho da tíbia: {self.tibia_length_cm:.4f} cm")
+                #print(f"Ponto de interseção: {intersection_point[0]:.4f}, {intersection_point[1]:.4f}")
                 self.consecutive_trunk_error_counter += 1
                 tr_status = 1
+
+                # Adiciona uma nova linha ao DataFrame de interseções, agora com o tempo
+                self.trunk_intersections_df.loc[len(self.trunk_intersections_df)] = [
+                    timestamp_ms,
+                    self.tibia_length_cm,
+                    intersection_point[0],
+                    intersection_point[1]
+                ]
+
             else:
                 self.consecutive_trunk_error_counter = 0
 
@@ -374,13 +400,13 @@ class SquatRepetitionAnalyzer:
             self.consecutive_foot_error_counter = 0
         return hl_status
     
-    def _check_errors(self, dict_lm):
+    def _check_errors(self, dict_lm, timestamp_ms):
         hp_status = tr_status = hl_status = kn_status = 0
 
         if self.current_phase in ['descendo', 'subindo']:
             
             hp_status = self._check_head_posture_error(dict_lm)
-            tr_status = self._check_trunk_flexion_error(dict_lm)
+            tr_status = self._check_trunk_flexion_error(dict_lm, timestamp_ms)
             kn_status = self._check_knee_translation_error(dict_lm)
             hl_status = self._check_heel_lift_error(dict_lm)
         

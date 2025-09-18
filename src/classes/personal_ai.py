@@ -10,11 +10,12 @@ from .pose_detector import PoseDetector
 from .squat_analyzer import SquatRepetitionAnalyzer
 
 class PersonalAI:
-    def __init__(self, file_name, name_pessoa, model_path,
+    def __init__(self, file_name, name_pessoa, user_height_cm ,model_path,
                  descent_threshold=0.05, ascent_return_threshold=0.02,
                  trunk_error_threshold=5, knee_error_threshold=5,
                  head_error_threshold=5, foot_error_threshold=5):
     
+        self.user_height_cm = user_height_cm
         self.file_name = file_name
         self.name_pessoa = name_pessoa
         self.image_q = queue.Queue()
@@ -26,7 +27,8 @@ class PersonalAI:
             trunk_error_threshold=trunk_error_threshold, 
             knee_error_threshold=knee_error_threshold,   
             head_error_threshold=head_error_threshold,   
-            foot_error_threshold=foot_error_threshold    
+            foot_error_threshold=foot_error_threshold,
+            user_height_cm=user_height_cm    
         )
 
         # DataFrames para armazenar os dados de cada frame, mostrando se ouve algum desvio ou não
