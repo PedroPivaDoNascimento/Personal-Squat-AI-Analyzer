@@ -4,7 +4,7 @@ import pandas as pd
 
 # TODO Após concertar os limites, trabalhar na organização do código
 # TODO Adicionar o novo falso positivo no calcanhar
-# TODO Testar nova função de cálculo do tronco
+# TODO Testar nova função de cálculo do tronco com valores reais
 
 from .vector_calculator import VectorCalculator
 
@@ -43,6 +43,8 @@ class SquatRepetitionAnalyzer:
         self.hip_x_history = []
 
         self.tibia_length_cm = None  # Comprimento da tíbia, calculado após a calibração
+        self.initial_heel_ankle_distance = None
+
 
         self.repetitions_detected = 0
         self.current_phase = 'inicial'
@@ -152,6 +154,8 @@ class SquatRepetitionAnalyzer:
 
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 
+
+                
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
                 self.knee_y_inicial = np.mean(self.knee_y_history[-10:])
                 self.ankle_x_inicial = np.mean(self.ankle_x_history[-10:])
@@ -159,6 +163,12 @@ class SquatRepetitionAnalyzer:
                 self.heel_x_inicial = np.mean(self.heel_x_history[-10:])
                 self.showlder_x_inicial = np.mean(self.showlder_x_history[-10:])
                 self.hip_x_inicial = np.mean(self.hip_x_history[-10:])
+
+                avg_ankle_y = np.mean(self.ankle_y_history[-10:])
+                avg_heel_y = np.mean(self.heel_y_history[-10:])
+                self.initial_heel_ankle_distance = VectorCalculator.calculate_distance(
+                    self.ankle_x_inicial, avg_ankle_y, self.heel_x_inicial, avg_heel_y
+                )
 
             else:
                 self.ear_y_history.append(ear_y)
@@ -367,8 +377,40 @@ class SquatRepetitionAnalyzer:
             self.consecutive_knee_error_counter = 0
         return kn_status
 
+    def _check_heel_and_ankle_proximity(self, dict_lm):
+        """
+        Verifica se a distância entre o calcanhar e o tornozelo está
+        abaixo de 50% da distância inicial, retornando True se estiverem muito próximos.
+        """
+        # Se a distância inicial ainda não foi calibrada, não prossiga.
+        if self.initial_heel_ankle_distance is None:
+            return False
+            
+        try:
+            ankle_x = dict_lm['right_ankle_x']
+            ankle_y = dict_lm['right_ankle_y']
+            heel_x = dict_lm['right_heel_x']
+            heel_y = dict_lm['right_heel_y']
+            
+            # Calcula a distância euclidiana atual entre os dois pontos
+            current_distance = VectorCalculator.calculate_distance(ankle_x, ankle_y, heel_x, heel_y)
+            
+            # Verifica se a distância atual é menor que 50% da distância inicial
+            if current_distance < (self.initial_heel_ankle_distance * 0.5):
+                print(f"Calcanhar e tornozelo estão muito próximos: {current_distance:.4f} (inicial: {self.initial_heel_ankle_distance:.4f})")
+
+            return current_distance < (self.initial_heel_ankle_distance * 0.5)
+            
+        except KeyError as e:
+            print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")
+            return False
+
+    def _check_heel_upper_ankle(self, dict_lm):
+        return dict_lm['right_heel_y'] < dict_lm['right_ankle_y']
+
     def _check_heel_lift_error(self, dict_lm):
         hl_status = 0
+        LIMITE_SUBIDA_CALCANHAR = 0.02  # ? Testar esse valor
         try:
             posicao_x_calcanhar = dict_lm["right_heel_x"]
             posicao_y_calcanhar = dict_lm["right_heel_y"]
@@ -378,15 +420,18 @@ class SquatRepetitionAnalyzer:
 
             # Verifica se o calcanhar está mais alto que o inicial
             # E se o tornozelo avançou no eixo x em relação à posição inicial
-            avancou_tornozelo = posicao_x_tornozelo > self.ankle_x_inicial + 0.1 # ? Esse valor ainda precisa ser ajustado
+            avancou_tornozelo = abs(posicao_x_tornozelo - self.ankle_x_inicial) > 0.02 # ? Esse valor ainda precisa ser ajustado
             # ? Essa função do avancou_calcanhar ainda está sendo testada
             avancou_calcanhar = abs(posicao_x_calcanhar - self.heel_x_inicial) > 0.01
 
-            if (self.position_validation(dict_lm, 'heel') is False and self.position_validation(dict_lm, 'ankle') is False):
-                #print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
+            pontos_proximos = self._check_heel_and_ankle_proximity(dict_lm)
+            falso_positivo_calcanhar_acima_tornozelo = self._check_heel_upper_ankle(dict_lm)
+
+            if (self.position_validation(dict_lm, 'heel') is False or self.position_validation(dict_lm, 'ankle') is False or pontos_proximos or falso_positivo_calcanhar_acima_tornozelo):
+                print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
                 return hl_status
 
-            if posicao_y_calcanhar < self.heel_y_inicial and (avancou_tornozelo or avancou_calcanhar):
+            if (posicao_y_calcanhar < self.heel_y_inicial - LIMITE_SUBIDA_CALCANHAR) or avancou_tornozelo or avancou_calcanhar:
                 self.consecutive_foot_error_counter += 1
                 hl_status = 1
             else:
