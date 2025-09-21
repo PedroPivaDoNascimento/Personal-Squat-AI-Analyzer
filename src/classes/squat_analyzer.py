@@ -149,12 +149,10 @@ class SquatRepetitionAnalyzer:
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
                 
-                # Calibra o "chão" usando o valor MÉDIO da posição Y
+                # Calibra o "chão" usando o valor maximo da posição Y
                 # para pegar o ponto mais baixo e estável do calcanhar.
 
-                self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
-                
-
+                self.heel_y_inicial = np.max(self.heel_y_history[-10:])
                 
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
                 self.knee_y_inicial = np.mean(self.knee_y_history[-10:])
@@ -240,19 +238,21 @@ class SquatRepetitionAnalyzer:
 
     def position_validation(self, dict_lm, name_body_part):
         if name_body_part == 'ankle':
-            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.1:
+            if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.03:
+                print("Tornozelo pra tras")
                 return False
         elif name_body_part == 'knee':
-            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.1:
+            if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.03:
                 return False
         elif name_body_part == 'heel':
-            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.025:   
+            if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.03:   
+                print("Calcanhar pra tras")
                 return False
         elif name_body_part == 'shoulder':
-            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.1:
+            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.03:
                 return False
         elif name_body_part == 'hip':
-            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.1:
+            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.03:
                 return False
         else:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
@@ -377,10 +377,20 @@ class SquatRepetitionAnalyzer:
             self.consecutive_knee_error_counter = 0
         return kn_status
 
+    def _check_big_toe_lower_heel(self, dict_lm):
+        TOLERANCIA_Y = 0.05 # ? testar tolerância
+
+        try:
+            if dict_lm['right_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y):
+                print("Dedo do pe abaixou")
+            return dict_lm['right_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y)
+        except KeyError as e:
+            print(f"Erro: Landmarks necessários para a verificação do pé não foram encontrados: {e}")
+            return False
+
     def _check_heel_and_ankle_proximity(self, dict_lm):
         """
-        Verifica se a distância entre o calcanhar e o tornozelo está
-        abaixo de 50% da distância inicial, retornando True se estiverem muito próximos.
+        Verifica se a distância entre o calcanhar e o tornozelo estão ficando próximos
         """
         # Se a distância inicial ainda não foi calibrada, não prossiga.
         if self.initial_heel_ankle_distance is None:
@@ -395,43 +405,50 @@ class SquatRepetitionAnalyzer:
             # Calcula a distância euclidiana atual entre os dois pontos
             current_distance = VectorCalculator.calculate_distance(ankle_x, ankle_y, heel_x, heel_y)
             
-            # Verifica se a distância atual é menor que 50% da distância inicial
-            if current_distance < (self.initial_heel_ankle_distance * 0.5):
-                print(f"Calcanhar e tornozelo estão muito próximos: {current_distance:.4f} (inicial: {self.initial_heel_ankle_distance:.4f})")
+            if current_distance < (self.initial_heel_ankle_distance * 0.95):
+                print("Pontos se aproximaram")
 
-            return current_distance < (self.initial_heel_ankle_distance * 0.5)
+            # Verifica se a distância atual é menor que a distância inicial
+            return current_distance < (self.initial_heel_ankle_distance * 1)
             
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")
             return False
 
     def _check_heel_upper_ankle(self, dict_lm):
-        return dict_lm['right_heel_y'] < dict_lm['right_ankle_y']
+        try:
+            if (dict_lm['right_heel_y'] < self.ankle_y_inicial):
+                print("Calcanhar alto até de mais")
+            return dict_lm['right_heel_y'] < self.ankle_y_inicial
+        except KeyError as e:
+            print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")
+            return False
 
     def _check_heel_lift_error(self, dict_lm):
         hl_status = 0
-        LIMITE_SUBIDA_CALCANHAR = 0.02  # ? Testar esse valor
+        LIMITE_SUBIDA_CALCANHAR = 0.0125  # ? Testar esse valor
         try:
             posicao_x_calcanhar = dict_lm["right_heel_x"]
             posicao_y_calcanhar = dict_lm["right_heel_y"]
             posicao_x_tornozelo = dict_lm["right_ankle_x"]
 
+            #print(f"Tornozelo X inicial: {self.ankle_x_inicial:.4f}, Calcanhar X inicial: {self.heel_x_inicial:.4f}, Calcanhar Y inicial: {self.heel_y_inicial:.4f}")
             #print(f"Tornozelo X: {posicao_x_tornozelo:.4f}, Calcanhar X: {posicao_x_calcanhar:.4f}, Calcanhar Y: {posicao_y_calcanhar:.4f}")
 
             # Verifica se o calcanhar está mais alto que o inicial
             # E se o tornozelo avançou no eixo x em relação à posição inicial
-            avancou_tornozelo = abs(posicao_x_tornozelo - self.ankle_x_inicial) > 0.02 # ? Esse valor ainda precisa ser ajustado
+            avancou_tornozelo = abs(posicao_x_tornozelo - self.ankle_x_inicial) > 0.027 # ? Esse valor ainda precisa ser ajustado
             # ? Essa função do avancou_calcanhar ainda está sendo testada
-            avancou_calcanhar = abs(posicao_x_calcanhar - self.heel_x_inicial) > 0.01
+            avancou_calcanhar = abs(posicao_x_calcanhar - self.heel_x_inicial) > 0.0179
 
             pontos_proximos = self._check_heel_and_ankle_proximity(dict_lm)
             falso_positivo_calcanhar_acima_tornozelo = self._check_heel_upper_ankle(dict_lm)
+            falso_positivo_dedo_pe_abaixo_calcanhar = self._check_big_toe_lower_heel(dict_lm)
 
-            if (self.position_validation(dict_lm, 'heel') is False or self.position_validation(dict_lm, 'ankle') is False or pontos_proximos or falso_positivo_calcanhar_acima_tornozelo):
-                print("Os pontos para o cálculo do CALCANHAR estão marcados incorretamente.")
+            if (self.position_validation(dict_lm, 'heel') is False or self.position_validation(dict_lm, 'ankle') is False or pontos_proximos or falso_positivo_calcanhar_acima_tornozelo or falso_positivo_dedo_pe_abaixo_calcanhar):
                 return hl_status
 
-            if (posicao_y_calcanhar < self.heel_y_inicial - LIMITE_SUBIDA_CALCANHAR) or avancou_tornozelo or avancou_calcanhar:
+            if (posicao_y_calcanhar < self.heel_y_inicial - LIMITE_SUBIDA_CALCANHAR) and (avancou_tornozelo or avancou_calcanhar):
                 self.consecutive_foot_error_counter += 1
                 hl_status = 1
             else:
