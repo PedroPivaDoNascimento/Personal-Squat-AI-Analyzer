@@ -87,10 +87,7 @@ class SquatRepetitionAnalyzer:
 
         try:
             # Altura da pessoa no vídeo (normalizada)
-            normalized_person_height = VectorCalculator.calculate_distance(
-                dict_lm['nose_x'], dict_lm['nose_y'],
-                dict_lm['right_heel_x'], dict_lm['right_heel_y']
-            )
+            normalized_person_height = abs(dict_lm['nose_y'] - dict_lm['right_heel_y'])
             
             # Comprimento da tíbia no vídeo (normalizado)
             normalized_tibia_length = VectorCalculator.calculate_distance(

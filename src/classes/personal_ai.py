@@ -10,10 +10,7 @@ from .pose_detector import PoseDetector
 from .squat_analyzer import SquatRepetitionAnalyzer
 
 class PersonalAI:
-    def __init__(self, file_name, name_pessoa, user_height_cm ,model_path,
-                 descent_threshold=0.05, ascent_return_threshold=0.02,
-                 trunk_error_threshold=5, knee_error_threshold=5,
-                 head_error_threshold=5, foot_error_threshold=5):
+    def __init__(self, file_name, name_pessoa, user_height_cm ,model_path, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5):
     
         self.user_height_cm = user_height_cm
         self.file_name = file_name
