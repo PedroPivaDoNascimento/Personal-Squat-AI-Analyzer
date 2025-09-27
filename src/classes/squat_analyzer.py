@@ -76,7 +76,6 @@ class SquatRepetitionAnalyzer:
             'Ponto Interseção Y'
         ])
         
-# Adicione ou substitua esta função na sua classe SquatRepetitionAnalyzer
     def _calibrate_and_validate_with_height(self, dict_lm):
         """
         Calcula o fator de escala usando a altura real do usuário e
@@ -87,10 +86,7 @@ class SquatRepetitionAnalyzer:
 
         try:
             # Altura da pessoa no vídeo (normalizada)
-            normalized_person_height = VectorCalculator.calculate_distance(
-                dict_lm['nose_x'], dict_lm['nose_y'],
-                dict_lm['right_heel_x'], dict_lm['right_heel_y']
-            )
+            normalized_person_height = abs(dict_lm['nose_y'] - dict_lm['right_heel_y'])
             
             # Comprimento da tíbia no vídeo (normalizado)
             normalized_tibia_length = VectorCalculator.calculate_distance(
@@ -243,65 +239,60 @@ class SquatRepetitionAnalyzer:
                 return False
         elif name_body_part == 'knee':
             if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.03:
+                print("Joelho pra tras")
                 return False
         elif name_body_part == 'heel':
             if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.03:   
                 print("Calcanhar pra tras")
-                return False
-        elif name_body_part == 'shoulder':
-            if dict_lm['right_shoulder_x'] < self.showlder_x_inicial - 0.03:
-                return False
-        elif name_body_part == 'hip':
-            if dict_lm['right_hip_x'] < self.hip_x_inicial - 0.03:
                 return False
         else:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
         return True
 
     def _check_head_posture_error(self, dict_lm):
+        """
+        Verifica a postura da cabeça no plano sagital (vista lateral)
+        usando o plano de Frankfurt e o ângulo orientado (com sinal).
+        """
         hp_status = 0
+        TOLERANCIA_ANGULO = 5
+        
         try:
-            # Coordenadas dos olhos
-            olho_direito_x = dict_lm['right_eye_x']
-            olho_direito_y = dict_lm['right_eye_y']
-            olho_esquerdo_x = dict_lm.get('left_eye_x', None)
-            olho_esquerdo_y = dict_lm.get('left_eye_y', None)
-
-            # Se não tiver left_eye, calcula pelo nariz e ombros (fallback)
-            if olho_esquerdo_x is not None and olho_esquerdo_y is not None:
-                dx = olho_direito_x - olho_esquerdo_x
-                dy = olho_direito_y - olho_esquerdo_y
-            else:
-                # Fallback: usa ombros
-                ombro_esquerdo_x = dict_lm['left_shoulder_x']
-                ombro_esquerdo_y = dict_lm.get('left_shoulder_y', 0)
-                ombro_direito_x = dict_lm['right_shoulder_x']
-                ombro_direito_y = dict_lm.get('right_shoulder_y', 0)
-                dx = ombro_direito_x - ombro_esquerdo_x
-                dy = ombro_direito_y - ombro_esquerdo_y
-
+            ear_x = dict_lm['right_ear_x']
+            ear_y = dict_lm['right_ear_y']
+            eye_x = dict_lm['right_eye_x']
+            eye_y = dict_lm['right_eye_y']
+            
+            dx = eye_x - ear_x
+            dy = eye_y - ear_y
+            
             angulo_rad = math.atan2(dy, dx)
-            angulo_graus = abs(math.degrees(angulo_rad))
+            angulo_graus = math.degrees(angulo_rad)
 
-            # O ideal é que a linha dos olhos esteja em 0° (horizontal)
-            # Se o ângulo for maior que 5°, considera erro
-            TOLERANCIA_ANGULO = 5
-            if min(abs(angulo_graus), abs(angulo_graus - 180)) > TOLERANCIA_ANGULO:
+            if angulo_graus > TOLERANCIA_ANGULO:
+                #print(f"Angulo da cabeça: {angulo_graus:.2f}° (Erro)")
                 self.consecutive_head_error_counter += 1
                 hp_status = 1
             else:
                 self.consecutive_head_error_counter = 0
 
+            # O restante da sua lógica de contagem
             if self.consecutive_head_error_counter >= self.HEAD_ERROR_THRESHOLD:
                 self.total_head_error_counter += 1
                 self.consecutive_head_error_counter = 0
 
         except Exception as e:
-            print(f"Erro no cálculo do alinhamento da cabeça: {e}")
+            # Mensagens de erro resumidas
+            if 'KeyError' in str(e):
+                print(f"Erro: Landmarks necessários para o cálculo da cabeça não foram encontrados.")
+            else:
+                print(f"Erro no cálculo do alinhamento da cabeça: {e}")
+                
             self.consecutive_head_error_counter = 0
-        
+            
         return hp_status
 
+    
     def _check_trunk_flexion_error(self, dict_lm, timestamp_ms):
         tr_status = 0
 
@@ -315,7 +306,7 @@ class SquatRepetitionAnalyzer:
             right_knee_x = dict_lm['right_knee_x']
             right_knee_y = dict_lm['right_knee_y']
 
-            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or self.position_validation(dict_lm, 'hip') is False or self.position_validation(dict_lm, 'shoulder') is False):
+            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False):
                 #print("Os pontos para o cálculo do TRONCO estão marcados incorretamente.")
                 return tr_status
 
@@ -328,9 +319,9 @@ class SquatRepetitionAnalyzer:
             if intersection_point is None:
                 return tr_status  # Retas paralelas, não há interseção
             
-            if ((intersection_point[0] > max(right_hip_x, right_shoulder_x)) or (intersection_point[0] > max(right_ankle_x, right_knee_x))):
-                #print(f"Tamanho da tíbia: {self.tibia_length_cm:.4f} cm")
-                #print(f"Ponto de interseção: {intersection_point[0]:.4f}, {intersection_point[1]:.4f}")
+            
+            limit_of_x = 2
+            if (((intersection_point[0] > max(right_hip_x, right_shoulder_x)) or (intersection_point[0] > max(right_ankle_x, right_knee_x))) and (intersection_point[0] < limit_of_x)):
                 self.consecutive_trunk_error_counter += 1
                 tr_status = 1
 

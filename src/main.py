@@ -18,6 +18,9 @@ def setup_app_ui():
     Retorna os valores dos parâmetros e o arquivo de vídeo enviado.
     """
 
+    # Cabeça: 19, 28, 80, 5
+    #Tronco: 5, 23
+
     st.title('Análise Sagital Direita - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     user_height_cm = st.number_input("Sua Altura em centímetros", min_value=100, max_value=250, value=170)
@@ -27,8 +30,8 @@ def setup_app_ui():
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
-        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 150, 72, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
+        trunk_err_th = st.slider('Tolerância de Desvio - Tronco (Duração Permitida)', 1, 150, 23, 1, help="Número de instantes que o tronco pode estar desalinhado antes de ser considerado um erro na repetição.")
+        head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
         knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
