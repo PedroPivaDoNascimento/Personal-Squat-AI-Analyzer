@@ -2,7 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 
-# TODO Trabalhar na organização do código
+# TODO Trabalhar na melhora da organização do código
 
 from .vector_calculator import VectorCalculator
 
