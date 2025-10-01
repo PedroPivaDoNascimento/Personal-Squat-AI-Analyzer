@@ -2,9 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 
-# TODO Após concertar os limites, trabalhar na organização do código
-# TODO Adicionar o novo falso positivo no calcanhar
-# TODO Testar nova função de cálculo do tronco com valores reais
+# TODO Trabalhar na organização do código
 
 from .vector_calculator import VectorCalculator
 

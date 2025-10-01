@@ -9,14 +9,12 @@ from classes.squat_report_excel_writer import SquatReportExcelWriter
 
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
-# --- Funções de UI/Processamento ---
 
 def show_sagittal_analysis(): 
     """
     Função principal que monta a interface e gerencia o fluxo da análise sagital.
     """
     
-    # Botão Sair (Lógica inline, sem aviso)
     if st.button('⬅️ Sair (Voltar para Seleção)'):
         st.session_state.page = 'selection'
         if 'uploaded_file_data' in st.session_state:
@@ -118,7 +116,6 @@ def display_detailed_charts(ai_analyzer):
             
             df_rep_errors = pd.DataFrame(rep_error_data).set_index('Parte do Corpo')
             
-            # ATUALIZADO: use_container_width=True -> width='stretch'
             st.bar_chart(df_rep_errors, width='stretch', height=300) 
             st.markdown("---")
         else:
@@ -190,9 +187,6 @@ def display_data_frames(ai):
             df_display[time_column_name] = (df_display[time_column_name] / 1000).round(2)
             df_display.rename(columns={time_column_name: 'Tempo (s)'}, inplace=True)
     
-            # ATUALIZADO: st.dataframe agora usa width='stretch' (se necessário)
-            # Embora st.dataframe use use_container_width=True por padrão, 
-            # garantimos que ele não emitirá o warning se estivesse definido explicitamente
             st.dataframe(df_display, width='stretch')
         else:
             st.write(f'#### {title}')
