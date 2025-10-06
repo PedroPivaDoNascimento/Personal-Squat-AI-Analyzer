@@ -1,65 +1,54 @@
+# classes/sagittal_ai.py (ou saggital_personal_ai.py)
+
 import pandas as pd
 import cv2
 import numpy as np
-import queue
-from mediapipe import solutions
-from mediapipe.framework.formats import landmark_pb2
 
-# Importar as classes que PersonalAI utiliza
-from .pose_detector import PoseDetector
-from .squat_analyzer import SquatRepetitionAnalyzer
+# CORREÇÃO DO ERRO: Importação relativa para a classe base
+# Ajuste o nome do arquivo se necessário (e.g., .base_ai)
+from .base_personal_ai import BaseAI 
+from ..squat_analyzer.squat_analyzer_sagittal import SquatRepetitionAnalyzer 
 
-class PersonalAI:
+class SagittalAI(BaseAI):
+    """
+    Classe concreta para análise do agachamento unipodal no Plano Sagital.
+    """
     def __init__(self, file_name, name_pessoa, user_height_cm ,model_path, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5):
-    
-        self.user_height_cm = user_height_cm
-        self.file_name = file_name
-        self.name_pessoa = name_pessoa
-        self.image_q = queue.Queue()
         
-        self.pose_detector = PoseDetector(model_path)
+        kwargs = {
+            'descent_threshold': descent_threshold,
+            'ascent_return_threshold': ascent_return_threshold,
+            'trunk_error_threshold': trunk_error_threshold, 
+            'knee_error_threshold': knee_error_threshold,   
+            'head_error_threshold': head_error_threshold,   
+            'foot_error_threshold': foot_error_threshold,
+        }
+        
+        super().__init__(file_name, name_pessoa, user_height_cm, model_path, **kwargs)
+        
+        # 1. Inicializa o analisador de repetições específico
         self.squat_analyzer = SquatRepetitionAnalyzer(
-            descent_threshold=descent_threshold,
-            ascent_return_threshold=ascent_return_threshold,
-            trunk_error_threshold=trunk_error_threshold, 
-            knee_error_threshold=knee_error_threshold,   
-            head_error_threshold=head_error_threshold,   
-            foot_error_threshold=foot_error_threshold,
-            user_height_cm=user_height_cm    
+            user_height_cm=user_height_cm,
+            **kwargs 
         )
-
-        # DataFrames para armazenar os dados de cada frame, mostrando se ouve algum desvio ou não
+        
+        # 2. Inicializa os DataFrames específicos (Responsabilidade do Plano Sagital)
         self.head_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio da Cabeça"])
         self.trunk_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Tronco"])
         self.heel_df = pd.DataFrame(columns=["Tempo (ms)", "Elevação do Calcanhar"])
         self.knee_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Joelho"])
-        
-        self.frame = 0
 
-    def draw_landmarks(self, rgb, res):
-        out = np.copy(rgb)
-        if res.pose_landmarks: 
-            for pose_landmark_group in res.pose_landmarks: 
-                proto = landmark_pb2.NormalizedLandmarkList()
-                proto.landmark.extend([
-                    landmark_pb2.NormalizedLandmark(x=l.x, y=l.y, z=l.z)
-                    for l in pose_landmark_group 
-                ])
-                solutions.drawing_utils.draw_landmarks(
-                    out, proto,
-                    solutions.pose.POSE_CONNECTIONS,
-                    solutions.drawing_styles.get_default_pose_landmarks_style()
-                )
-        return out
 
     def process_video(self, draw, display):
+        """
+        Implementação concreta: Lógica de processamento de frames para o plano sagital.
+        """
         cap = cv2.VideoCapture(self.file_name)
         fps = cap.get(cv2.CAP_PROP_FPS) or 30
         ts = 0
         
         try:
             while cap.isOpened():
-                #ret é um booleano que indica se o frame ainda está sendo lido ou se o vídeo já acabou e o frame é a imagem capturada
                 ret, frame = cap.read()
                 if not ret:
                     break
@@ -77,22 +66,20 @@ class PersonalAI:
                 else:
                     current_hp, current_tr, current_hl, current_kn = \
                         self.squat_analyzer.process_frame_landmarks(None, ts)
-                    print("Nenhum landmark detectado no frame.")
-
-                # Adiciona os dados ao DataFrame correspondente    
+                
+                # Adiciona os dados ao DataFrame 
                 for df, val in [
                     (self.head_df, current_hp), 
                     (self.trunk_df, current_tr),
                     (self.heel_df, current_hl), 
                     (self.knee_df, current_kn)
                 ]:
-                    df.loc[len(df)] = [int(ts), val]
+                    if df is not None:
+                        df.loc[len(df)] = [int(ts), val]
 
-                # Desenha os landmarks se necessário
                 if draw:
                     frame = self.draw_landmarks(rgb, res)
 
-                # Mostra o frame se necessário    
                 if display:
                     cv2.imshow('Frame', frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -106,4 +93,4 @@ class PersonalAI:
         
         self.squat_analyzer.finalize_analysis()
         
-        self.image_q.put((1, 1, 'done')) # Sinaliza que o processamento/fluxo de frames foi concluído.
+        self.image_q.put((1, 1, 'done'))

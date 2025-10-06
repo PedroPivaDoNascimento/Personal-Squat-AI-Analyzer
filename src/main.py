@@ -1,10 +1,8 @@
-# Arquivo: main.py
-
 import os
 import sys
 
-# O diretório 'src' deve ser adicionado ao sys.path para importações absolutas.
-# O diretório atual é o 'ProgramaAgachamento/'.
+# O diretório 'src' deve ser adicionado ao sys.path para importações absolutas
+# O diretório atual é o 'ProgramaAgachamento/'
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 def run_streamlit_app():

@@ -4,7 +4,7 @@ import pandas as pd
 
 # TODO Trabalhar na organização do código
 
-from .vector_calculator import VectorCalculator
+from ..vector_calculator import VectorCalculator
 
 class SquatRepetitionAnalyzer:
     def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5, user_height_cm=170):

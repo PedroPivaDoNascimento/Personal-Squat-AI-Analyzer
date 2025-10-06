@@ -3,24 +3,16 @@ import pandas as pd
 import os
 
 # Importações de classes e utilidades 
-from classes.personal_ai import PersonalAI
+from classes.personal_ai.saggital_personal_ai import SagittalAI as PersonalAI
 from ultils.feedback_messages import feedback_messages
-from classes.squat_report_excel_writer import SquatReportExcelWriter
-
+from classes.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
 MODEL_PATH = 'models/pose_landmarker_full.task'
-
 
 def show_sagittal_analysis(): 
     """
     Função principal que monta a interface e gerencia o fluxo da análise sagital.
     """
-    
-    if st.button('⬅️ Sair (Voltar para Seleção)'):
-        st.session_state.page = 'selection'
-        if 'uploaded_file_data' in st.session_state:
-            del st.session_state.uploaded_file_data
-        st.rerun()
-    
+        
     st.title('Análise Sagital Direita - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     user_height_cm = st.number_input("Sua Altura em centímetros", min_value=100, max_value=250, value=170)
@@ -78,7 +70,7 @@ def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
     ai.process_video(True, True) 
     st.success('Análise concluída!')
 
-    excel_writer = SquatReportExcelWriter(name_input, ai.squat_analyzer)
+    excel_writer = SagittalReportExcelWriter(name_input, ai.squat_analyzer)
     excel_writer.generate_report()     
     os.remove(temp_path)
     return ai
