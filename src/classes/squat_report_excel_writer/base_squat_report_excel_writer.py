@@ -17,9 +17,8 @@ class BaseSquatReportExcelWriter(ABC):
         """
         self.person_name = person_name
         self.analyzer = squat_analyzer_instance 
-        self.plane_folder_name = plane_folder_name # <-- Define o nome da pasta a partir da subclasse
+        self.plane_folder_name = plane_folder_name # Define o nome da pasta a partir da subclasse
         
-    # --- MÉTODOS ABSTRATOS (DEVEM SER IMPLEMENTADOS PELAS SUBCLASSES) ---
 
     @abstractmethod
     def _get_body_parts_data(self):
@@ -44,7 +43,6 @@ class BaseSquatReportExcelWriter(ABC):
         """
         pass
 
-    # --- MÉTODOS CONCRETOS (LÓGICA REUTILIZÁVEL) ---
 
     def _fill_repetition_data(self, df_report):
         """

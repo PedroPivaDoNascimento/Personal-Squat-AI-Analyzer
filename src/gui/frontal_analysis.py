@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 
-# Importações de classes e utilidades 
 from classes.personal_ai.frontal_personal_ai import FrontalAI as PersonalAI
 from classes.squat_report_excel_writer.frontal_report_excel_writer import FrontalReportExcelWriter
 from ultils.feedback_messages import feedback_messages
@@ -24,13 +23,12 @@ def show_frontal_analysis():
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
+        hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
         
-        # Corrigido: Nomes dos sliders e variáveis para Valgo e Pronação
         knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
-        foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 5, 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
+        foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 6, 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
 
 
     params = {
@@ -48,7 +46,7 @@ def show_frontal_analysis():
         display_overall_summary(ai_instance.squat_analyzer, name_input)
         
         if ai_instance.squat_analyzer.repetitions_detected > 0:
-            display_detailed_charts(ai_instance.squat_analyzer) # RESTAURADA
+            display_detailed_charts(ai_instance.squat_analyzer)
             display_repetition_details_and_feedback(ai_instance.squat_analyzer)
             display_data_frames(ai_instance)
         else:
@@ -64,7 +62,6 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         f.write(uploaded_file.getbuffer())
     st.info('Analisando vídeo...')
 
-    # A classe PersonalAI é um alias para FrontalAI neste arquivo
     ai = PersonalAI(
         file_name=temp_path, 
         name_pessoa=name_input, 
@@ -80,7 +77,6 @@ def process_and_analyze_video(uploaded_file, name_input, params):
     os.remove(temp_path)
     return ai
 
-# --- Funções de Exibição (Adaptadas para o Frontal e com Contagem) ---
 
 def display_overall_summary(ai_analyzer, name):
     st.markdown(f"""

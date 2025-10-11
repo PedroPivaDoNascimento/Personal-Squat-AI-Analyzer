@@ -1,11 +1,6 @@
-# classes/sagittal_ai.py (ou saggital_personal_ai.py)
-
 import pandas as pd
 import cv2
-import numpy as np
 
-# CORREÇÃO DO ERRO: Importação relativa para a classe base
-# Ajuste o nome do arquivo se necessário (e.g., .base_ai)
 from .base_personal_ai import BaseAI 
 from ..squat_analyzer.squat_analyzer_sagittal import SquatRepetitionAnalyzer 
 
@@ -26,13 +21,11 @@ class SagittalAI(BaseAI):
         
         super().__init__(file_name, name_pessoa, user_height_cm, model_path, **kwargs)
         
-        # 1. Inicializa o analisador de repetições específico
         self.squat_analyzer = SquatRepetitionAnalyzer(
             user_height_cm=user_height_cm,
             **kwargs 
         )
         
-        # 2. Inicializa os DataFrames específicos (Responsabilidade do Plano Sagital)
         self.head_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio da Cabeça"])
         self.trunk_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Tronco"])
         self.heel_df = pd.DataFrame(columns=["Tempo (ms)", "Elevação do Calcanhar"])

@@ -1,13 +1,10 @@
-# classes/base_ai.py
 
-import pandas as pd
 import numpy as np
 import queue
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 from abc import ABC, abstractmethod
 
-# Importar as classes base
 from ..pose_detector import PoseDetector 
 
 class BaseAI(ABC):
@@ -22,11 +19,9 @@ class BaseAI(ABC):
         self.name_pessoa = name_pessoa
         self.image_q = queue.Queue()
         
-        # Infraestrutura Comum
         self.pose_detector = PoseDetector(model_path)
         self.squat_analyzer = None 
         
-        # DataFrames e Frame count (apenas declarados)
         self.head_df = None
         self.trunk_df = None
         self.heel_df = None

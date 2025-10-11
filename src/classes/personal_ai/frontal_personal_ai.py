@@ -1,11 +1,9 @@
 import pandas as pd
 import cv2
-import numpy as np
 
-# CORREÇÃO DO ERRO: Importação relativa para a classe base
 from .base_personal_ai import BaseAI 
-# Importa o analisador específico que criamos (sem o sufixo _sagittal)
 from ..squat_analyzer.squat_analyzer_frontal import SquatRepetitionAnalyzerFrontal 
+
 
 class FrontalAI(BaseAI):
     """
@@ -16,7 +14,6 @@ class FrontalAI(BaseAI):
                  hip_error_threshold=5, knee_valgus_error_threshold=5, 
                  foot_pronation_error_threshold=5):
         
-        # 1. Parâmetros de análise frontal
         kwargs = {
             'descent_threshold': descent_threshold,
             'ascent_return_threshold': ascent_return_threshold,
@@ -28,10 +25,8 @@ class FrontalAI(BaseAI):
         # user_height_cm foi passado como 0 (ou None) para satisfazer a BaseAI
         super().__init__(file_name, name_pessoa, 0, model_path, **kwargs)
         
-        # 2. Inicializa o analisador de repetições específico (SEM user_height_cm)
         self.squat_analyzer = SquatRepetitionAnalyzerFrontal(**kwargs)
         
-        # 3. Inicializa os DataFrames específicos (Responsabilidade do Plano Frontal)
         self.hip_tilt_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Quadril"])
         self.knee_valgus_df = pd.DataFrame(columns=["Tempo (ms)", "Valgo de Joelho"])
         self.foot_pronation_df = pd.DataFrame(columns=["Tempo (ms)", "Pronação do Pé"])

@@ -2,7 +2,7 @@ import math
 import numpy as np
 import pandas as pd
 
-# TODO Trabalhar na organização do código
+# TODO Trabalhar na organização do código e adptar as funções de calculo vetoriais para a classe do vector_calculator
 
 from ..vector_calculator import VectorCalculator
 
@@ -96,14 +96,11 @@ class SquatRepetitionAnalyzer:
                 print("Não foi possível calibrar. Certifique-se de que a pessoa inteira está visível.")
                 return
 
-            # 1. VALIDAÇÃO: Calcule a proporção da tíbia em relação à altura da pessoa no vídeo
             tibia_proportion_in_video = (normalized_tibia_length / normalized_person_height)
             #print(f"Validação: A tíbia ocupa {tibia_proportion_in_video:.2%} da altura da pessoa no vídeo.")
 
-            # 2. CALIBRAÇÃO: Calcule o comprimento real da tíbia usando sua lógica de "regra de 3"
             self.tibia_length_cm = self.user_height_cm * tibia_proportion_in_video
             
-            # 3. Calcule o fator de escala final
             self.scale_factor_cm = self.tibia_length_cm / normalized_tibia_length
 
             #print(f"Calibração finalizada. O comprimento da sua tíbia foi estimado em {estimated_real_tibia_cm:.2f} cm.")

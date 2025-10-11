@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 
-# Importações de classes e utilidades 
 from classes.personal_ai.saggital_personal_ai import SagittalAI as PersonalAI
 from ultils.feedback_messages import feedback_messages
 from classes.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
@@ -17,7 +16,6 @@ def show_sagittal_analysis():
     name_input = st.text_input('Nome da pessoa')
     user_height_cm = st.number_input("Sua Altura em centímetros", min_value=100, max_value=250, value=170)
     
-    # O uploader gerencia o arquivo de vídeo
     uploaded_file_data = st.file_uploader('Envie o vídeo (Sagital Direita)', type=['mp4', 'avi', 'mov'])
     
     st.write('### Parâmetros de Avaliação do Exercício')
@@ -40,7 +38,6 @@ def show_sagittal_analysis():
         'foot_error_threshold': foot_err_th
     }
     
-    # 2. Processamento e Exibição de Resultados
     if uploaded_file_data and name_input and user_height_cm:
         ai_instance = process_and_analyze_video(uploaded_file_data, name_input, user_height_cm, params)
         
@@ -75,7 +72,6 @@ def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
     os.remove(temp_path)
     return ai
 
-# --- Funções de Exibição ---
 
 def display_overall_summary(ai_analyzer, name):
     st.markdown(f"""

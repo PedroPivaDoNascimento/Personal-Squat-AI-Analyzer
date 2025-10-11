@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Tuple
+import math
 
 class VectorCalculator:
     """
@@ -66,3 +67,55 @@ class VectorCalculator:
             x = (b1 * c2 - b2 * c1) / determinant
             y = (a2 * c1 - a1 * c2) / determinant
             return x, y
+        
+    @staticmethod
+    def angle_to_horizontal(x1, y1, x2, y2):
+        dx = x2 - x1
+        dy = y2 - y1 
+        angle_rad = math.atan2(dy, dx)
+        angle_deg = math.degrees(angle_rad)
+        
+        angle_deg = angle_deg % 360
+        return min(abs(angle_deg), abs(180 - angle_deg))
+    
+    @staticmethod
+    def calculate_angle_3p(x1: float, y1: float, x2: float, y2: float, x3: float, y3: float) -> float:
+        """
+        Calcula o ângulo em graus formado no ponto central (p2)
+        pelos três pontos: p1(x1, y1), p2(x2, y2) e p3(x3, y3).
+
+        Parâmetros:
+        x1, y1: Coordenadas do primeiro ponto (p1).
+        x2, y2: Coordenadas do ponto central/vértice do ângulo (p2).
+        x3, y3: Coordenadas do terceiro ponto (p3).
+
+        Retorna:
+        O ângulo em graus.
+        """
+        p1 = np.array((x1, y1))
+        p2 = np.array((x2, y2))
+        p3 = np.array((x3, y3))
+
+        # Vetores v21 (de p2 a p1) e v23 (de p2 a p3)
+        v21 = p1 - p2
+        v23 = p3 - p2
+
+        # Produto escalar (Lei dos Cossenos)
+        dot_product = np.dot(v21, v23)
+        norm_v21 = np.linalg.norm(v21)
+        norm_v23 = np.linalg.norm(v23)
+
+        # Trata o caso de pontos colineares ou coincidentes
+        if norm_v21 == 0 or norm_v23 == 0:
+            return 180.0
+
+        cos_angle = dot_product / (norm_v21 * norm_v23)
+
+        # Garante que o argumento do arccos esteja entre -1.0 e 1.0
+        cos_angle = np.clip(cos_angle, -1.0, 1.0)
+
+        # Converte para graus
+        angle_rad = np.arccos(cos_angle)
+        angle_deg = np.degrees(angle_rad)
+
+        return angle_deg

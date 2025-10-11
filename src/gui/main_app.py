@@ -9,20 +9,16 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 
-# Importa a função principal da análise sagital e frontal
 from sagittal_analysis import show_sagittal_analysis
 from frontal_analysis import show_frontal_analysis
 
-# --- Gerenciamento de Estado do Streamlit ---
 if 'page' not in st.session_state:
     st.session_state.page = 'selection'
 
-# Função para resetar o estado (usada internamente na lógica de navegação)
 def navigate_to_selection():
     st.session_state.page = 'selection'
     st.rerun()
 
-# Função da Nova Tela Inicial
 def show_selection_page():
     """Exibe a tela inicial com as opções de análise."""
     st.title('Programa de Análise de Agachamento')
@@ -41,7 +37,6 @@ def show_selection_page():
             st.session_state.page = 'frontal'
             st.rerun()
 
-# --- Lógica Principal da Aplicação ---
 if __name__ == "__main__":
     if st.session_state.page == 'selection':
         show_selection_page()
