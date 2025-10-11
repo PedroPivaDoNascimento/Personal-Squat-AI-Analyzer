@@ -153,6 +153,8 @@ class SquatRepetitionAnalyzerFrontal:
 
             if self.consecutive_hip_error_counter >= self.HIP_ERROR_THRESHOLD:
                 self.total_hip_error_counter += 1
+                self.consecutive_hip_error_counter = 0
+
                 
         except Exception as e:
             print(f"Erro ao calcular inclinação do quadril: {e}")
@@ -183,6 +185,8 @@ class SquatRepetitionAnalyzerFrontal:
 
             if self.consecutive_knee_valgus_error_counter >= self.KNEE_VALGUS_ERROR_THRESHOLD:
                 self.total_knee_valgus_error_counter += 1
+                self.consecutive_knee_valgus_error_counter = 0
+
                 
         except Exception as e:
             print(f"Erro ao calcular valgo de joelho: {e}")
@@ -211,6 +215,8 @@ class SquatRepetitionAnalyzerFrontal:
 
             if self.consecutive_foot_pronation_error_counter >= self.FOOT_PRONATION_ERROR_THRESHOLD:
                 self.total_foot_pronation_error_counter += 1
+                self.consecutive_foot_pronation_error_counter = 0
+
                 
         except KeyError as e:
             print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
