@@ -26,7 +26,7 @@ def show_sagittal_analysis():
         head_err_th = st.slider('Tolerância de Desvio - Cabeça (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que a cabeça pode estar desalinhada antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
-        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
+        knee_err_th = st.slider('Tolerância de Desvio - Joelho (Duração Permitida)', 1, 150, 6, 1, help="Número de instantes que o joelho pode estar desalinhado antes de ser considerado um erro na repetição.")
         foot_err_th = st.slider('Tolerância de Desvio - Calcanhar (Duração Permitida)', 1, 150, 8, 1, help="Número de instantes que o calcanhar pode estar levantado antes de ser considerado um erro na repetição.")
 
     params = {

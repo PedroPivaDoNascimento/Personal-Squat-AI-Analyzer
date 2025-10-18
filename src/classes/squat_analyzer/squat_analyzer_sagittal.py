@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 # TODO Trabalhar na organização do código e adptar as funções de calculo vetoriais para a classe do vector_calculator
+# TODO Ajustar a função do joelho para que ela idendifique melhor os erros
 
 from ..vector_calculator import VectorCalculator
 
@@ -230,15 +231,15 @@ class SquatRepetitionAnalyzer:
     def position_validation(self, dict_lm, name_body_part):
         if name_body_part == 'ankle':
             if dict_lm['right_ankle_x'] < self.ankle_x_inicial - 0.03:
-                print("Tornozelo pra tras")
+                #print("Tornozelo pra tras")
                 return False
         elif name_body_part == 'knee':
             if dict_lm['right_knee_x'] < self.knee_x_inicial - 0.03:
-                print("Joelho pra tras")
+                #print("Joelho pra tras")
                 return False
         elif name_body_part == 'heel':
             if dict_lm['right_heel_x'] < self.heel_x_inicial - 0.03:   
-                print("Calcanhar pra tras")
+                #print("Calcanhar pra tras")
                 return False
         else:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
@@ -339,22 +340,28 @@ class SquatRepetitionAnalyzer:
             self.consecutive_trunk_error_counter = 0
         return tr_status
     
-    def _check_knee_translation_error(self, dict_lm):
+    def _check_knee_translation_error(self, dict_lm, timestamp_ms):
         kn_status = 0
         try:
             foot_length_x = abs(dict_lm['right_big_toe_x'] - dict_lm['right_heel_x'])
-            allowed_forward_translation = foot_length_x * 0.30
-            
-            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False):
-                #print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
+
+            allowed_forward_translation = foot_length_x * 0.19  # Permite até 19% do comprimento do pé como avanço do joelho
+            avancou_percentual = (dict_lm['right_knee_x'] - dict_lm['right_big_toe_x']) / foot_length_x
+            avancou_exessivamente = (avancou_percentual > 1.0)
+
+
+            if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or (self.position_validation(dict_lm, 'heel') is False) or avancou_exessivamente):
+                print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
                 return kn_status
     
             if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:
+                # debug de quantos porcentos o joelho avançou em relação ao comprimento do pé
+                print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_error_counter += 1
                 kn_status = 1
             else:
                 self.consecutive_knee_error_counter = 0
-                    
+    
             if self.consecutive_knee_error_counter >= self.KNEE_ERROR_THRESHOLD:
                 self.total_knee_error_counter += 1
                 self.consecutive_knee_error_counter = 0
@@ -390,9 +397,6 @@ class SquatRepetitionAnalyzer:
             
             # Calcula a distância euclidiana atual entre os dois pontos
             current_distance = VectorCalculator.calculate_distance(ankle_x, ankle_y, heel_x, heel_y)
-            
-            if current_distance < (self.initial_heel_ankle_distance * 0.95):
-                print("Pontos se aproximaram")
 
             # Verifica se a distância atual é menor que a distância inicial
             return current_distance < (self.initial_heel_ankle_distance * 1)
@@ -455,7 +459,7 @@ class SquatRepetitionAnalyzer:
             
             hp_status = self._check_head_posture_error(dict_lm)
             tr_status = self._check_trunk_flexion_error(dict_lm, timestamp_ms)
-            kn_status = self._check_knee_translation_error(dict_lm)
+            kn_status = self._check_knee_translation_error(dict_lm, timestamp_ms)
             hl_status = self._check_heel_lift_error(dict_lm)
         
         return hp_status, tr_status, hl_status, kn_status
