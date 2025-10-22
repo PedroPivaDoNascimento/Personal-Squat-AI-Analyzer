@@ -75,6 +75,9 @@ class SquatRepetitionAnalyzer:
             'Ponto Interseção Y'
         ])
         
+        # As variáveis de suavização self.head_angle_history e self.SMOOTHING_WINDOW_SIZE
+        # foram removidas conforme sua solicitação.
+        
     def _calibrate_and_validate_with_height(self, dict_lm):
         """
         Calcula o fator de escala usando a altura real do usuário e
@@ -159,6 +162,7 @@ class SquatRepetitionAnalyzer:
                 self.initial_heel_ankle_distance = VectorCalculator.calculate_distance(
                     self.ankle_x_inicial, avg_ankle_y, self.heel_x_inicial, avg_heel_y
                 )
+
 
             else:
                 self.ear_y_history.append(ear_y)
@@ -245,13 +249,13 @@ class SquatRepetitionAnalyzer:
             print("Nome invalido, verifique se vc forneceu o nome correto do ponto")
         return True
 
-    def _check_head_posture_error(self, dict_lm):
+    def _check_head_posture_error(self, dict_lm, timestamp_ms):
         """
         Verifica a postura da cabeça no plano sagital (vista lateral)
-        usando o plano de Frankfurt e o ângulo orientado (com sinal).
+        usando o plano de Frankfurt, checando o ângulo absoluto contra 0° (Horizonte).
         """
         hp_status = 0
-        TOLERANCIA_ANGULO = 5
+        TOLERANCIA_ANGULO = 2.5
         
         try:
             ear_x = dict_lm['right_ear_x']
@@ -264,9 +268,13 @@ class SquatRepetitionAnalyzer:
             
             angulo_rad = math.atan2(dy, dx)
             angulo_graus = math.degrees(angulo_rad)
+            
+
+            #if (timestamp_ms/1000 >= 6 and timestamp_ms/1000 < 7):
+                #print(f"Calibração cabeça - Frame Tempo: {timestamp_ms/1000:.2f}s, Ângulo: {angulo_graus:.2f}°")
 
             if angulo_graus > TOLERANCIA_ANGULO:
-                #print(f"Angulo da cabeça: {angulo_graus:.2f}° (Erro)")
+                print(f"Angulo da cabeça: {angulo_graus:.2f}° (Erro - Desvio > {TOLERANCIA_ANGULO}º do horizonte). Esse erro ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_head_error_counter += 1
                 hp_status = 1
             else:
@@ -351,12 +359,12 @@ class SquatRepetitionAnalyzer:
 
 
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or (self.position_validation(dict_lm, 'heel') is False) or avancou_exessivamente):
-                print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
+                #print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
                 return kn_status
     
             if dict_lm['right_knee_x'] > dict_lm['right_big_toe_x'] + allowed_forward_translation:
                 # debug de quantos porcentos o joelho avançou em relação ao comprimento do pé
-                print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
+                #print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_error_counter += 1
                 kn_status = 1
             else:
@@ -374,8 +382,8 @@ class SquatRepetitionAnalyzer:
         TOLERANCIA_Y = 0.05 # ? testar tolerância
 
         try:
-            if dict_lm['right_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y):
-                print("Dedo do pe abaixou")
+            #if dict_lm['right_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y):
+                #print("Dedo do pe abaixou")
             return dict_lm['right_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y)
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a verificação do pé não foram encontrados: {e}")
@@ -407,8 +415,8 @@ class SquatRepetitionAnalyzer:
 
     def _check_heel_upper_ankle(self, dict_lm):
         try:
-            if (dict_lm['right_heel_y'] < self.ankle_y_inicial):
-                print("Calcanhar alto até de mais")
+            #if (dict_lm['right_heel_y'] < self.ankle_y_inicial):
+                #print("Calcanhar alto até de mais")
             return dict_lm['right_heel_y'] < self.ankle_y_inicial
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")
@@ -457,7 +465,7 @@ class SquatRepetitionAnalyzer:
 
         if self.current_phase in ['descendo', 'subindo']:
             
-            hp_status = self._check_head_posture_error(dict_lm)
+            hp_status = self._check_head_posture_error(dict_lm, timestamp_ms)
             tr_status = self._check_trunk_flexion_error(dict_lm, timestamp_ms)
             kn_status = self._check_knee_translation_error(dict_lm, timestamp_ms)
             hl_status = self._check_heel_lift_error(dict_lm)
