@@ -7,12 +7,12 @@ from ultils.feedback_messages import feedback_messages
 from classes.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
-def show_sagittal_analysis(): 
+def show_sagittal_left_analysis(): 
     """
     Função principal que monta a interface e gerencia o fluxo da análise sagital.
     """
         
-    st.title('Análise Sagital Direita - Agachamento')
+    st.title('Análise Sagital Esquerdo - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     user_height_cm = st.number_input("Sua Altura em centímetros", min_value=100, max_value=250, value=170)
     
@@ -61,7 +61,7 @@ def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
     st.info('Analisando vídeo...')
 
     ai = PersonalAI(
-        temp_path, name_input, user_height_cm, MODEL_PATH,
+        temp_path, name_input, "left", user_height_cm, MODEL_PATH,
         **params 
     )
     ai.process_video(True, True) 

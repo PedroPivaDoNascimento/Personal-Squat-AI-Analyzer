@@ -18,7 +18,7 @@ class SquatRepetitionAnalyzerFrontal:
         self.FOOT_PRONATION_ERROR_THRESHOLD = foot_pronation_error_threshold
         
         # Tolerâncias Angulares e de Deslocamento (FIXADAS INTERNAMENTE)
-        self.HIP_ANGLE_TOLERANCE = 3          # Limite de inclinação do quadril (3°)
+        self.HIP_ANGLE_TOLERANCE = 180.25         # Limite de inclinação do quadril
         self.KNEE_ANGLE_MIN = 170.0              # Limite inferior do ângulo H-K-A (170°)
         self.FOOT_SHIFT_TOLERANCE = 0.9          # Limite de colapso do arco (0.9 = 10% de redução na altura inicial)
 
@@ -30,6 +30,20 @@ class SquatRepetitionAnalyzerFrontal:
         self.heel_y_inicial = None          # Y inicial do Calcanhar
         self.big_toe_y_inicial = None       # Y inicial do Dedão
         self.initial_arch_height_y = None   # Altura de referência (abs(heel_y - big_toe_y))
+        
+        self.hip_x_inicial = None
+        self.hip_y_inicial = None
+        self.knee_x_inicial = None
+        self.knee_y_inicial = None
+        self.ankle_x_inicial = None
+        self.ankle_y_inicial = None
+
+        self.hip_x_history = []
+        self.hip_y_history = []
+        self.knee_x_history = []
+        self.knee_y_history = []
+        self.ankle_x_history = []
+        self.ankle_y_history = []
         
         self.heel_y_history = [] 
         self.big_toe_y_history = [] 
@@ -55,7 +69,7 @@ class SquatRepetitionAnalyzerFrontal:
         # Resultados por Repetição (status booleano 0/1)
         self.reps = {'hip': [], 'knee_valgus': [], 'foot_pronation': []}
         self.repetition_timestamps = []
-        
+    
     
     def create_dictionary_landmarks(self, lm_obj):
         try:
@@ -82,7 +96,7 @@ class SquatRepetitionAnalyzerFrontal:
             return hip, kn_valgus, foot_pronation
         
         self._detect_repetition_phase(dict_lm, timestamp_ms)
-        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm)
+        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms)
         
         return hip, kn_valgus, foot_pronation
 
@@ -100,7 +114,7 @@ class SquatRepetitionAnalyzerFrontal:
             
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
-                
+  
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
                 
@@ -136,14 +150,13 @@ class SquatRepetitionAnalyzerFrontal:
                     self.current_phase = 'inicial'
                     self.min_y_in_rep = None
 
-    def _check_hip_tilt_error(self, dict_lm):
+    def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
         hip_status = 0
         try:
             x1, y1 = dict_lm['left_hip_x'], dict_lm['left_hip_y']
             x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
 
             angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
-            #print(f"Ângulo do quadril: {angle_deg:.2f}°")
 
             if angle_deg > self.HIP_ANGLE_TOLERANCE:
                 self.consecutive_hip_error_counter += 1
@@ -155,6 +168,7 @@ class SquatRepetitionAnalyzerFrontal:
                 self.total_hip_error_counter += 1
                 self.consecutive_hip_error_counter = 0
 
+
                 
         except Exception as e:
             print(f"Erro ao calcular inclinação do quadril: {e}")
@@ -163,7 +177,7 @@ class SquatRepetitionAnalyzerFrontal:
         return hip_status
 
 
-    def _check_knee_valgus_error(self, dict_lm):
+    def _check_knee_valgus_error(self, dict_lm, timestamp_ms):
         kn_valgus_status = 0
         try:
             # Extrai as 6 coordenadas (x,y) de p1, p2 e p3
@@ -175,9 +189,9 @@ class SquatRepetitionAnalyzerFrontal:
             y3 = dict_lm['right_ankle_y']
             
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
-            # print(f"Ângulo H-K-A: {angle_hka:.2f}°")
             
-            if angle_hka < self.KNEE_ANGLE_MIN:
+            if angle_hka < self.KNEE_ANGLE_MIN and angle_hka < 0:
+                print(f"{angle_hka:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
             else:
@@ -186,6 +200,8 @@ class SquatRepetitionAnalyzerFrontal:
             if self.consecutive_knee_valgus_error_counter >= self.KNEE_VALGUS_ERROR_THRESHOLD:
                 self.total_knee_valgus_error_counter += 1
                 self.consecutive_knee_valgus_error_counter = 0
+                #print(f"Angulo atual é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
+
 
                 
         except Exception as e:
@@ -228,13 +244,13 @@ class SquatRepetitionAnalyzerFrontal:
         return foot_pronation_status
 
 
-    def _check_errors_frontal(self, dict_lm):
+    def _check_errors_frontal(self, dict_lm, timestamp_ms):
         hip_status = kn_valgus_status = foot_pronation_status = 0
 
         if self.current_phase in ['descendo', 'subindo']:
             
-            hip_status = self._check_hip_tilt_error(dict_lm)
-            kn_valgus_status = self._check_knee_valgus_error(dict_lm)
+            hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
+            kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
             foot_pronation_status = self._check_foot_pronation_error(dict_lm)
         
         return hip_status, kn_valgus_status, foot_pronation_status

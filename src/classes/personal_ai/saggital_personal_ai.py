@@ -2,13 +2,14 @@ import pandas as pd
 import cv2
 
 from .base_personal_ai import BaseAI 
-from ..squat_analyzer.squat_analyzer_sagittal import SquatRepetitionAnalyzer 
+from ..squat_analyzer.saggital.right_saggital import RightSaggital
+from ..squat_analyzer.saggital.left_saggital import LeftSaggital 
 
 class SagittalAI(BaseAI):
     """
     Classe concreta para análise do agachamento unipodal no Plano Sagital.
     """
-    def __init__(self, file_name, name_pessoa, user_height_cm ,model_path, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5):
+    def __init__(self, file_name, name_pessoa, side, user_height_cm ,model_path, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5):
         
         kwargs = {
             'descent_threshold': descent_threshold,
@@ -21,10 +22,20 @@ class SagittalAI(BaseAI):
         
         super().__init__(file_name, name_pessoa, user_height_cm, model_path, **kwargs)
         
-        self.squat_analyzer = SquatRepetitionAnalyzer(
-            user_height_cm=user_height_cm,
-            **kwargs 
-        )
+        if (side == "right"):
+            self.squat_analyzer = RightSaggital(
+                user_height_cm=user_height_cm,
+                **kwargs 
+            )
+        elif (side == "left"):
+            self.squat_analyzer = LeftSaggital(
+                user_height_cm=user_height_cm,
+                **kwargs 
+            )
+        else:
+            print("Erro ao definir o lado")
+
+
         
         self.head_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio da Cabeça"])
         self.trunk_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Tronco"])

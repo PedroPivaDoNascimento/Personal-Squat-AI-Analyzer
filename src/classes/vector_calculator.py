@@ -76,46 +76,47 @@ class VectorCalculator:
         angle_deg = math.degrees(angle_rad)
         
         angle_deg = angle_deg % 360
-        return min(abs(angle_deg), abs(180 - angle_deg))
+        return angle_deg
     
     @staticmethod
-    def calculate_angle_3p(x1: float, y1: float, x2: float, y2: float, x3: float, y3: float) -> float:
+    def calculate_angle_3p(x1, y1, x2, y2, x3, y3):
         """
-        Calcula o ângulo em graus formado no ponto central (p2)
-        pelos três pontos: p1(x1, y1), p2(x2, y2) e p3(x3, y3).
+        Calcula o ângulo em graus com base no ATAN2, o que permite determinar
+        o sentido (horário/anti-horário) do ângulo, retornando valores
+        entre -180.0 e +180.0 graus.
 
         Parâmetros:
-        x1, y1: Coordenadas do primeiro ponto (p1).
-        x2, y2: Coordenadas do ponto central/vértice do ângulo (p2).
-        x3, y3: Coordenadas do terceiro ponto (p3).
+        x1, y1: Coordenadas do primeiro ponto (p1, ex: Quadril).
+        x2, y2: Coordenadas do ponto central/vértice (p2, ex: Joelho).
+        x3, y3: Coordenadas do terceiro ponto (p3, ex: Tornozelo).
 
         Retorna:
-        O ângulo em graus.
+        O ângulo em graus (valor entre -180.0 e 180.0).
         """
+        # 1. Converte as coordenadas para arrays numpy
         p1 = np.array((x1, y1))
         p2 = np.array((x2, y2))
         p3 = np.array((x3, y3))
 
-        # Vetores v21 (de p2 a p1) e v23 (de p2 a p3)
+        # 2. Cria os vetores a partir do vértice (p2)
         v21 = p1 - p2
         v23 = p3 - p2
 
-        # Produto escalar (Lei dos Cossenos)
+        # 3. Calcula os componentes necessários para o atan2
+        
+        # O "seno" (componente y) é o Produto Vetorial (z-componente em 2D)
+        # Produto Vetorial em 2D: v1_x * v2_y - v1_y * v2_x
+        # O sinal deste valor indica se o ângulo é positivo ou negativo (sentido).
+        cross_product_z = v21[0] * v23[1] - v21[1] * v23[0]
+
+        # O "cosseno" (componente x) é o Produto Escalar (o que você já estava usando)
         dot_product = np.dot(v21, v23)
-        norm_v21 = np.linalg.norm(v21)
-        norm_v23 = np.linalg.norm(v23)
 
-        # Trata o caso de pontos colineares ou coincidentes
-        if norm_v21 == 0 or norm_v23 == 0:
-            return 180.0
-
-        cos_angle = dot_product / (norm_v21 * norm_v23)
-
-        # Garante que o argumento do arccos esteja entre -1.0 e 1.0
-        cos_angle = np.clip(cos_angle, -1.0, 1.0)
-
-        # Converte para graus
-        angle_rad = np.arccos(cos_angle)
+        # 4. Usa np.arctan2 (a versão do atan2 no numpy)
+        # O atan2 usa seno e cosseno para obter o ângulo no intervalo [-pi, pi]
+        angle_rad = np.arctan2(cross_product_z, dot_product)
+        
+        # 5. Converte para Graus
         angle_deg = np.degrees(angle_rad)
 
         return angle_deg
