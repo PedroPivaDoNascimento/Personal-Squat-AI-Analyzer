@@ -67,7 +67,7 @@ def process_and_analyze_video(uploaded_file, name_input, user_height_cm, params)
     ai.process_video(True, True) 
     st.success('Análise concluída!')
 
-    excel_writer = SagittalReportExcelWriter(name_input, ai.squat_analyzer)
+    excel_writer = SagittalReportExcelWriter(name_input, ai.squat_analyzer, "direito")
     excel_writer.generate_report()     
     os.remove(temp_path)
     return ai

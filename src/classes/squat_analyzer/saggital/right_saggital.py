@@ -40,7 +40,7 @@ class RightSaggital(BaseSaggital):
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a calibração não foram encontrados: {e}")
 
-    def _detect_repetition_phase(self, dict_lm, ts):
+    def _detect_repetition_phase(self, dict_lm, ts):    
         ear_y = dict_lm['right_ear_y']
         heel_y = dict_lm['right_heel_y']
         heel_x = dict_lm['right_heel_x']

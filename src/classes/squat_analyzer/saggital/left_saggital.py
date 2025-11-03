@@ -145,15 +145,15 @@ class LeftSaggital(BaseSaggital):
 
     def position_validation(self, dict_lm, name_body_part):
         if name_body_part == 'ankle':
-            if dict_lm['left_ankle_x'] < self.ankle_x_inicial + 0.03:
+            if dict_lm['left_ankle_x'] > self.ankle_x_inicial + 0.03:
                 #print("Tornozelo pra tras")
                 return False
         elif name_body_part == 'knee':
-            if dict_lm['left_knee_x'] < self.knee_x_inicial + 0.03:
+            if dict_lm['left_knee_x'] > self.knee_x_inicial + 0.03:
                 #print("Joelho pra tras")
                 return False
         elif name_body_part == 'heel':
-            if dict_lm['left_heel_x'] < self.heel_x_inicial + 0.03:   
+            if dict_lm['left_heel_x'] > self.heel_x_inicial + 0.03:   
                 #print("Calcanhar pra tras")
                 return False
         else:
@@ -272,13 +272,13 @@ class LeftSaggital(BaseSaggital):
                 #print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
                 return kn_status
     
-            if dict_lm['left_knee_x'] < dict_lm['left_big_toe_x'] + allowed_forward_translation:
+            if dict_lm['left_knee_x'] < dict_lm['left_big_toe_x'] - allowed_forward_translation:
                 # debug de quantos porcentos o joelho avançou em relação ao comprimento do pé
                 #print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_error_counter += 1
                 kn_status = 1
             else:
-                self.consecutive_knee_error_counter = 0
+                self.consecutive_knee_error_counter = 0 
     
             if self.consecutive_knee_error_counter >= self.KNEE_ERROR_THRESHOLD:
                 self.total_knee_error_counter += 1

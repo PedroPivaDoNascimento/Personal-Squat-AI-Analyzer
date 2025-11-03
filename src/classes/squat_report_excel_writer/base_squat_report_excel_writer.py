@@ -6,7 +6,7 @@ import os
 import streamlit as st
 
 class BaseSquatReportExcelWriter(ABC):
-    def __init__(self, person_name, squat_analyzer_instance, plane_folder_name):
+    def __init__(self, person_name, squat_analyzer_instance, plane_folder_name, side="right"):
         """
         Inicializa o gerador de relatórios Excel.
 
@@ -15,6 +15,8 @@ class BaseSquatReportExcelWriter(ABC):
             squat_analyzer_instance (SquatRepetitionAnalyzer): A instância do analisador.
             plane_folder_name (str): O nome da subpasta específica do plano ('sagital' ou 'frontal').
         """
+        
+        self.side = side
         self.person_name = person_name
         self.analyzer = squat_analyzer_instance 
         self.plane_folder_name = plane_folder_name # Define o nome da pasta a partir da subclasse
@@ -95,22 +97,26 @@ class BaseSquatReportExcelWriter(ABC):
 
 
     def _save_report_to_excel(self, df_report):
-        """Cria pastas, subpastas e salva o relatório no diretório específico do plano."""
+        """
+        Cria pastas, subpastas (plano e lado) e salva o relatório. 
+        """
         
         output_folder = 'planilhas'
         
-        # Usa o nome da subpasta definido pela subclasse
-        subfolder_name = self.plane_folder_name 
+        # 1. Caminho da pasta do Plano (planilhas/sagital ou planilhas/frontal)
+        plane_output_folder = os.path.join(output_folder, self.plane_folder_name)
         
-        # Caminho completo da pasta (planilhas/sagital ou planilhas/frontal)
-        plane_output_folder = os.path.join(output_folder, subfolder_name)
+        # 2. Caminho da pasta do Lado (planilhas/sagital/right ou planilhas/frontal/left)
+        # O nome do lado deve ser minúsculo para consistência.
+        side_folder_name = self.side.lower() 
+        final_output_folder = os.path.join(plane_output_folder, side_folder_name) 
         
-        # Cria a estrutura de pastas
-        if not os.path.exists(plane_output_folder):
-            os.makedirs(plane_output_folder)
+        # Cria a estrutura de pastas (planilhas/plano/lado)
+        if not os.path.exists(final_output_folder):
+            os.makedirs(final_output_folder)
 
         # Define o caminho completo do arquivo
-        file_path = os.path.join(plane_output_folder, f"{self.person_name}_Relatorio.xlsx")
+        file_path = os.path.join(final_output_folder, f"{self.person_name}_Relatorio_{self.plane_folder_name}_{side_folder_name}.xlsx") # Adicionei nome do plano e lado ao nome do arquivo para clareza
 
         try:
             df_report.to_excel(file_path, index=False)
