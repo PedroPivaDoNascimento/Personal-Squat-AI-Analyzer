@@ -55,9 +55,6 @@ class LeftSaggital(BaseSaggital):
             if len(self.ear_y_history) >= 10:
                 self.ear_y_inicial = np.mean(self.ear_y_history[-10:])
                 
-                # Calibra o "chão" usando o valor maximo da posição Y
-                # para pegar o ponto mais baixo e estável do calcanhar.
-
                 self.heel_y_inicial = np.max(self.heel_y_history[-10:])
                 
                 self.knee_x_inicial = np.mean(self.knee_x_history[-10:])
@@ -73,7 +70,6 @@ class LeftSaggital(BaseSaggital):
                 self.initial_heel_ankle_distance = VectorCalculator.calculate_distance(
                     self.ankle_x_inicial, avg_ankle_y, self.heel_x_inicial, avg_heel_y
                 )
-
 
             else:
                 self.ear_y_history.append(ear_y)
@@ -332,7 +328,7 @@ class LeftSaggital(BaseSaggital):
             print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")
             return False
 
-    def _check_heel_lift_error(self, dict_lm):
+    def _check_heel_lift_error(self, dict_lm, timestamp_ms=0):
         hl_status = 0
         LIMITE_SUBIDA_CALCANHAR = 0.0125  # ? Testar esse valor
         try:

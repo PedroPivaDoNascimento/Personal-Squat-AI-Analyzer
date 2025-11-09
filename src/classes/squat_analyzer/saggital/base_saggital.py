@@ -126,7 +126,7 @@ class BaseSaggital(ABC):
         pass
 
     @abstractmethod
-    def _check_heel_and_ankle_proximity(self, dict_lm):
+    def _check_heel_and_ankle_proximity(self, dict_lm, timestamp_ms):
         pass
 
     @abstractmethod
@@ -145,7 +145,7 @@ class BaseSaggital(ABC):
             hp_status = self._check_head_posture_error(dict_lm, timestamp_ms)
             tr_status = self._check_trunk_flexion_error(dict_lm, timestamp_ms)
             kn_status = self._check_knee_translation_error(dict_lm, timestamp_ms)
-            hl_status = self._check_heel_lift_error(dict_lm)
+            hl_status = self._check_heel_lift_error(dict_lm, timestamp_ms)
         
         return hp_status, tr_status, hl_status, kn_status
 

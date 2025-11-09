@@ -18,13 +18,13 @@ class SquatRepetitionAnalyzerFrontal:
         self.FOOT_PRONATION_ERROR_THRESHOLD = foot_pronation_error_threshold
         
         # Tolerâncias Angulares e de Deslocamento (FIXADAS INTERNAMENTE)
-        self.HIP_ANGLE_TOLERANCE = 180.25         # Limite de inclinação do quadril
+        self.HIP_ANGLE_TOLERANCE =  180.25       # Limite de inclinação do quadril  180.25 
         self.KNEE_ANGLE_MIN = 170.0              # Limite inferior do ângulo H-K-A (170°)
-        self.FOOT_SHIFT_TOLERANCE = 0.9          # Limite de colapso do arco (0.9 = 10% de redução na altura inicial)
+        self.FOOT_SHIFT_TOLERANCE = 0.9          # Limite de colapso do arco (0.9 = 10% de variação na altura inicial)
 
         # Históricos para Detecção de Repetição
         self.ear_y_inicial = None
-        self.ear_y_history = []
+        self.ear_y_history = [] 
         
         
         self.heel_y_inicial = None          # Y inicial do Calcanhar
@@ -157,6 +157,9 @@ class SquatRepetitionAnalyzerFrontal:
             x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
 
             angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
+            
+            if (not(timestamp_ms/1000 > 4.61 and timestamp_ms/1000 < 9.99)):
+                print(f"Angulo do quadril: {angle_deg:.2f}°")
 
             if angle_deg > self.HIP_ANGLE_TOLERANCE:
                 self.consecutive_hip_error_counter += 1
@@ -191,7 +194,7 @@ class SquatRepetitionAnalyzerFrontal:
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
             if angle_hka < self.KNEE_ANGLE_MIN and angle_hka < 0:
-                print(f"{angle_hka:.2f}")
+                #print(f"{angle_hka:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
             else:

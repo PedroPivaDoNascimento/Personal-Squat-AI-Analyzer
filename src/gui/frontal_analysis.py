@@ -19,6 +19,8 @@ def show_frontal_analysis():
     
     uploaded_file_data = st.file_uploader('Envie o vídeo (Frontal Direita)', type=['mp4', 'avi', 'mov'])
     
+
+    
     st.write('### Parâmetros de Avaliação do Exercício')
     col_param1, col_param2 = st.columns(2)
     with col_param1:
