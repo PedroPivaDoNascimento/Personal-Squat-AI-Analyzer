@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from ..vector_calculator import VectorCalculator 
 
 # TODO Terminar os calculos de cada parte, testar eles
@@ -20,31 +21,16 @@ class SquatRepetitionAnalyzerFrontal:
         # Tolerâncias Angulares e de Deslocamento (FIXADAS INTERNAMENTE)
         self.HIP_ANGLE_TOLERANCE =  180.25       # Limite de inclinação do quadril  180.25 
         self.KNEE_ANGLE_MIN = 170.0              # Limite inferior do ângulo H-K-A (170°)
-        self.FOOT_SHIFT_TOLERANCE = 0.9          # Limite de colapso do arco (0.9 = 10% de variação na altura inicial)
-
+        self.Y_SHIFT_TOLERANCE = 0           # Valor que o ponto entre o dedão e o calanhar deve subir 0.002
+        
+        
         # Históricos para Detecção de Repetição
         self.ear_y_inicial = None
         self.ear_y_history = [] 
-        
+        self.initial_midpoint_y = None
         
         self.heel_y_inicial = None          # Y inicial do Calcanhar
         self.big_toe_y_inicial = None       # Y inicial do Dedão
-        self.initial_arch_height_y = None   # Altura de referência (abs(heel_y - big_toe_y))
-        
-        self.hip_x_inicial = None
-        self.hip_y_inicial = None
-        self.knee_x_inicial = None
-        self.knee_y_inicial = None
-        self.ankle_x_inicial = None
-        self.ankle_y_inicial = None
-
-        self.hip_x_history = []
-        self.hip_y_history = []
-        self.knee_x_history = []
-        self.knee_y_history = []
-        self.ankle_x_history = []
-        self.ankle_y_history = []
-        
         self.heel_y_history = [] 
         self.big_toe_y_history = [] 
         
@@ -117,9 +103,8 @@ class SquatRepetitionAnalyzerFrontal:
   
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
-                
-                self.initial_arch_height_y = abs(self.heel_y_inicial - self.big_toe_y_inicial)
-                
+                self.initial_midpoint_y = (self.heel_y_inicial + self.big_toe_y_inicial) / 2
+                                
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y) 
@@ -158,8 +143,6 @@ class SquatRepetitionAnalyzerFrontal:
 
             angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
             
-            if (not(timestamp_ms/1000 > 4.61 and timestamp_ms/1000 < 9.99)):
-                print(f"Angulo do quadril: {angle_deg:.2f}°")
 
             if angle_deg > self.HIP_ANGLE_TOLERANCE:
                 self.consecutive_hip_error_counter += 1
@@ -178,7 +161,6 @@ class SquatRepetitionAnalyzerFrontal:
             self.consecutive_hip_error_counter = 0
             
         return hip_status
-
 
     def _check_knee_valgus_error(self, dict_lm, timestamp_ms):
         kn_valgus_status = 0
@@ -213,22 +195,26 @@ class SquatRepetitionAnalyzerFrontal:
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self, dict_lm):
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
         foot_pronation_status = 0
-        
-        # Garante que a calibração inicial foi feita
-        if self.initial_arch_height_y is None:
+    
+    
+        if self.initial_midpoint_y is None:
             return 0 
-
+        
         try:
             heel_y = dict_lm['right_heel_y']
             big_toe_y = dict_lm['right_big_toe_y']
-
-            current_arch_height = abs(heel_y - big_toe_y)
             
-            if current_arch_height < self.initial_arch_height_y * self.FOOT_SHIFT_TOLERANCE:
+            current_midpoint_y = (heel_y + big_toe_y) / 2
+            
+    
+            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
                 self.consecutive_foot_pronation_error_counter += 1
                 foot_pronation_status = 1
+                print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+
+
             else:
                 self.consecutive_foot_pronation_error_counter = 0
 
@@ -236,16 +222,16 @@ class SquatRepetitionAnalyzerFrontal:
                 self.total_foot_pronation_error_counter += 1
                 self.consecutive_foot_pronation_error_counter = 0
 
+
                 
         except KeyError as e:
             print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
             self.consecutive_foot_pronation_error_counter = 0
         except Exception as e:
-            print(f"Erro inesperado ao calcular pronação do pé no plano frontal: {e}")
+            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
             self.consecutive_foot_pronation_error_counter = 0
-            
+                
         return foot_pronation_status
-
 
     def _check_errors_frontal(self, dict_lm, timestamp_ms):
         hip_status = kn_valgus_status = foot_pronation_status = 0
@@ -254,18 +240,16 @@ class SquatRepetitionAnalyzerFrontal:
             
             hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
             kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
-            foot_pronation_status = self._check_foot_pronation_error(dict_lm)
+            foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms)
         
         return hip_status, kn_valgus_status, foot_pronation_status
 
-    
     def _reset_consecutive_counters(self):
         """Reseta apenas os contadores de frames CONSECUTIVOS."""
         self.consecutive_hip_error_counter = 0
         self.consecutive_knee_valgus_error_counter = 0
         self.consecutive_foot_pronation_error_counter = 0
 
-    
     def _complete_repetition(self, current_ts):
         """Registra os erros de uma repetição completa e prepara para a próxima."""
         if self.repetitions_detected < 3:
@@ -289,8 +273,7 @@ class SquatRepetitionAnalyzerFrontal:
             self.total_knee_valgus_error_counter = 0
             self.total_foot_pronation_error_counter = 0
             # Os consecutivos serão resetados no 'inicial'
-
-            
+  
     def finalize_analysis(self):
         """Garante que a estrutura de 3 repetições esteja completa."""
         num_detected = self.repetitions_detected
