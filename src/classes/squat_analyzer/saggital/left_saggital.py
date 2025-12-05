@@ -177,11 +177,11 @@ class LeftSaggital(BaseSaggital):
             angulo_graus = math.degrees(angulo_rad)
             
 
-            #if (timestamp_ms/1000 >= 6 and timestamp_ms/1000 < 7):
-                #print(f"Calibração cabeça - Frame Tempo: {timestamp_ms/1000:.2f}s, Ângulo: {angulo_graus:.2f}°")
+            if (timestamp_ms/1000 >= 4 and timestamp_ms/1000 < 5):
+                print(f"Calibração cabeça - Frame Tempo: {timestamp_ms/1000:.2f}s, Ângulo: {angulo_graus:.2f}°")
 
             if angulo_graus > TOLERANCIA_ANGULO:
-                print(f"Angulo da cabeça: {angulo_graus:.2f}° (Erro - Desvio > {TOLERANCIA_ANGULO}º do horizonte). Esse erro ocorreu no segundo: {timestamp_ms/1000:.2f}")
+                #print(f"Angulo da cabeça: {angulo_graus:.2f}° (Erro - Desvio > {TOLERANCIA_ANGULO}º do horizonte). Esse erro ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_head_error_counter += 1
                 hp_status = 1
             else:
@@ -263,6 +263,9 @@ class LeftSaggital(BaseSaggital):
             avancou_percentual = (dict_lm['left_knee_x'] - dict_lm['left_big_toe_x']) / foot_length_x
             avancou_exessivamente = (avancou_percentual < -1.0)
 
+            #if ((timestamp_ms/1000 >= 5 and timestamp_ms/1000 < 6) or (timestamp_ms/1000 >= 9 and timestamp_ms/1000 < 10)):
+                #print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
+
 
             if (self.position_validation(dict_lm, 'knee') is False) or (self.position_validation(dict_lm, 'ankle') is False or (self.position_validation(dict_lm, 'heel') is False) or avancou_exessivamente):
                 #print("Os pontos para o cálculo do JOELHO estão marcados incorretamente.")
@@ -270,13 +273,13 @@ class LeftSaggital(BaseSaggital):
     
             if dict_lm['left_knee_x'] < dict_lm['left_big_toe_x'] - allowed_forward_translation:
                 # debug de quantos porcentos o joelho avançou em relação ao comprimento do pé
-                #print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_error_counter += 1
                 kn_status = 1
             else:
                 self.consecutive_knee_error_counter = 0 
     
             if self.consecutive_knee_error_counter >= self.KNEE_ERROR_THRESHOLD:
+                print(f"Joelho avançou {avancou_percentual:.2f} do comprimento do pé (Erro) e isso ocorreu no segundo: {timestamp_ms/1000:.2f}")
                 self.total_knee_error_counter += 1
                 self.consecutive_knee_error_counter = 0
         except Exception as e:
@@ -288,8 +291,8 @@ class LeftSaggital(BaseSaggital):
         TOLERANCIA_Y = 0.05 # ? testar tolerância
 
         try:
-            #if dict_lm['left_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y):
-                #print("Dedo do pe abaixou")
+            if dict_lm['left_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y):
+                print("Dedo do pe abaixou")
             return dict_lm['left_big_toe_y'] > (self.heel_y_inicial + TOLERANCIA_Y)
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a verificação do pé não foram encontrados: {e}")
@@ -309,8 +312,11 @@ class LeftSaggital(BaseSaggital):
             heel_x = dict_lm['left_heel_x']
             heel_y = dict_lm['left_heel_y']
             
-            # Calcula a distância euclidiana atual entre os dois pontos
+            # Calcula a distância atual entre os dois pontos
             current_distance = VectorCalculator.calculate_distance(ankle_x, ankle_y, heel_x, heel_y)
+
+            if current_distance < (self.initial_heel_ankle_distance * 1):
+                print("O calcanhar está muito perto do tornozelo")
 
             # Verifica se a distância atual é menor que a distância inicial
             return current_distance < (self.initial_heel_ankle_distance * 1)
@@ -321,8 +327,8 @@ class LeftSaggital(BaseSaggital):
 
     def _check_heel_upper_ankle(self, dict_lm):
         try:
-            #if (dict_lm['left_heel_y'] < self.ankle_y_inicial):
-                #print("Calcanhar alto até de mais")
+            if (dict_lm['left_heel_y'] < self.ankle_y_inicial):
+                print("Calcanhar alto até de mais")
             return dict_lm['left_heel_y'] < self.ankle_y_inicial
         except KeyError as e:
             print(f"Erro: Landmarks necessários para a verificação de proximidade não foram encontrados: {e}")

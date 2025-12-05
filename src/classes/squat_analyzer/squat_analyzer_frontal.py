@@ -2,7 +2,6 @@ import numpy as np
 import math
 from ..vector_calculator import VectorCalculator 
 
-# TODO Terminar os calculos de cada parte, testar eles
 
 class SquatRepetitionAnalyzerFrontal:
     
@@ -21,7 +20,8 @@ class SquatRepetitionAnalyzerFrontal:
         # Tolerâncias Angulares e de Deslocamento (FIXADAS INTERNAMENTE)
         self.HIP_ANGLE_TOLERANCE =  180.25       # Limite de inclinação do quadril  180.25 
         self.KNEE_ANGLE_MIN = 170.0              # Limite inferior do ângulo H-K-A (170°)
-        self.Y_SHIFT_TOLERANCE = 0           # Valor que o ponto entre o dedão e o calanhar deve subir 0.002
+        self.Y_SHIFT_TOLERANCE = 0           # Valor que o ponto entre o dedão e o calanhar deve subir
+        self.ANKLE_X_TOLERANCE = 0.004
         
         
         # Históricos para Detecção de Repetição
@@ -29,8 +29,10 @@ class SquatRepetitionAnalyzerFrontal:
         self.ear_y_history = [] 
         self.initial_midpoint_y = None
         
+        self.initial_ankle_x = None
         self.heel_y_inicial = None          # Y inicial do Calcanhar
         self.big_toe_y_inicial = None       # Y inicial do Dedão
+        self.ankle_x_history = []
         self.heel_y_history = [] 
         self.big_toe_y_history = [] 
         
@@ -90,6 +92,7 @@ class SquatRepetitionAnalyzerFrontal:
         ear_y = dict_lm['right_ear_y']
         heel_y = dict_lm['right_heel_y']
         big_toe_y = dict_lm['right_big_toe_y']
+        ankle_x = dict_lm['right_ankle_x']
 
         # Atualizando a checagem com os novos pontos Y
         if ear_y is None or heel_y is None or big_toe_y is None:
@@ -103,12 +106,14 @@ class SquatRepetitionAnalyzerFrontal:
   
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
+                self.initial_ankle_x = np.mean(self.ankle_x_history[-10:])
                 self.initial_midpoint_y = (self.heel_y_inicial + self.big_toe_y_inicial) / 2
                                 
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y) 
                 self.big_toe_y_history.append(big_toe_y)
+                self.ankle_x_history.append(ankle_x)
                 return
         
         self.ear_y_history.append(ear_y)
@@ -205,14 +210,17 @@ class SquatRepetitionAnalyzerFrontal:
         try:
             heel_y = dict_lm['right_heel_y']
             big_toe_y = dict_lm['right_big_toe_y']
+            ankle_x = dict_lm['right_ankle_x']
             
             current_midpoint_y = (heel_y + big_toe_y) / 2
+            shift_in_x = abs(ankle_x - self.initial_ankle_x)
+            is_ankle_shifted = shift_in_x > self.ANKLE_X_TOLERANCE
             
     
-            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
+            if (current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE) and is_ankle_shifted:
                 self.consecutive_foot_pronation_error_counter += 1
                 foot_pronation_status = 1
-                print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+                print(f"Tornozelo inicial: {self.initial_ankle_x:.4f}, tonozelo atual: {ankle_x:.4f}, tempo: {timestamp_ms/1000:.2f}")
 
 
             else:
