@@ -96,8 +96,7 @@ class SquatRepetitionAnalyzerFrontal:
         ear_y = dict_lm['right_ear_y']
         heel_y = dict_lm['right_heel_y']
         big_toe_y = dict_lm['right_big_toe_y']
-        ankle_x = dict_lm['right_ankle_x']
-
+        
         # Atualizando a checagem com os novos pontos Y
         if ear_y is None or heel_y is None or big_toe_y is None:
             return
