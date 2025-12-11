@@ -30,7 +30,7 @@ def show_frontal_analysis():
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
         
         knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
-        foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 1 , 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
+        foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 6 , 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
 
 
     params = {
