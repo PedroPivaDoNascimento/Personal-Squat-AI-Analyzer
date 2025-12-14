@@ -2,6 +2,7 @@ import numpy as np
 import math
 from ..vector_calculator import VectorCalculator 
 
+# TODO Terminar os calculos de cada parte, testar eles
 
 class SquatRepetitionAnalyzerFrontal:
     
@@ -15,14 +16,18 @@ class SquatRepetitionAnalyzerFrontal:
         # Thresholds para Contagem de Erros (mantidos como parâmetros)
         self.HIP_ERROR_THRESHOLD = hip_error_threshold
         self.KNEE_VALGUS_ERROR_THRESHOLD = knee_valgus_error_threshold
-        self.FOOT_PRONATION_ERROR_THRESHOLD = foot_pronation_error_threshold
+
+        self.FOOT_PRONATION_ERROR_THRESHOLD_MIDPOINT = 7            # Antes era 7 com os 3 juntos
+        self.FOOT_PRONATION_ERROR_THRESHOLD_LINE_INCLINATION = 6    # Antes era 6 a com os 3 juntos
+        self.FOOT_PRONATION_ERROR_THRESHOLD_ANKLE_VARIATION = 1
+
         
         # Tolerâncias Angulares e de Deslocamento (FIXADAS INTERNAMENTE)
         self.HIP_ANGLE_TOLERANCE =  180.25       # Limite de inclinação do quadril  180.25 
         self.KNEE_ANGLE_MIN = 170.0              # Limite inferior do ângulo H-K-A (170°)
-        self.Y_SHIFT_TOLERANCE = 0           # Valor que o ponto entre o dedão e o calanhar deve subir
-        self.ANKLE_X_TOLERANCE = 0.004
         
+        self.Y_SHIFT_TOLERANCE = 0      # Valor que o ponto entre o dedão e o calanhar deve subir
+        self.ANKLE_X_TOLERANCE = 0.004  # Menor que 0,0042 atual  0.004   
         
         # Históricos para Detecção de Repetição
         self.ear_y_inicial = None
@@ -32,11 +37,11 @@ class SquatRepetitionAnalyzerFrontal:
         self.initial_ankle_x = None
         self.heel_y_inicial = None          # Y inicial do Calcanhar
         self.big_toe_y_inicial = None       # Y inicial do Dedão
-        self.ankle_x_history = []
         self.heel_y_history = [] 
-        self.big_toe_y_history = []
+        self.big_toe_y_history = [] 
+        self.ankle_x_history = []
 
-        self.PRONATION_ANGLE_TOLERANCE = 5.085     # 5° de variação máxima < 23.695  > 4.2
+        self.PRONATION_ANGLE_TOLERANCE = 5.085     # 5° de variação máxima < 23.695  > 4.2   #Antes era 5.085
         self.initial_angle_pronation = None  # Ângulo inicial da reta Tornozelo-Ponto Médio
         self.pronation_angle_history = [] 
         
@@ -47,7 +52,10 @@ class SquatRepetitionAnalyzerFrontal:
         # Contadores Consecutivos (para erros temporários)
         self.consecutive_hip_error_counter = 0
         self.consecutive_knee_valgus_error_counter = 0
-        self.consecutive_foot_pronation_error_counter = 0
+
+        self.consecutive_foot_pronation_error_counter_midpoint = 0
+        self.consecutive_foot_pronation_error_counter_line_inclination = 0
+        self.consecutive_foot_pronation_error_counter_ankle_variation = 0
 
         # Contadores Totais de Erro (para o relatório final da repetição)
         self.total_hip_error_counter = 0
@@ -72,7 +80,7 @@ class SquatRepetitionAnalyzerFrontal:
                 'right_ankle_x': lm_obj[28].x, 'right_ankle_y': lm_obj[28].y,
                 'right_big_toe_x': lm_obj[32].x, 'right_big_toe_y': lm_obj[32].y,
                 'right_ear_y': lm_obj[7].y,
-                'right_heel_x': lm_obj[30].x, 'right_heel_y': lm_obj[30].y, 
+                'right_heel_y': lm_obj[30].y, 'right_heel_x': lm_obj[30].x
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -96,7 +104,7 @@ class SquatRepetitionAnalyzerFrontal:
         ear_y = dict_lm['right_ear_y']
         heel_y = dict_lm['right_heel_y']
         big_toe_y = dict_lm['right_big_toe_y']
-        
+
         # Atualizando a checagem com os novos pontos Y
         if ear_y is None or heel_y is None or big_toe_y is None:
             return
@@ -107,7 +115,7 @@ class SquatRepetitionAnalyzerFrontal:
             midpoint_y = (dict_lm['right_heel_y'] + dict_lm['right_big_toe_y']) / 2
             ankle_x = dict_lm['right_ankle_x']
             ankle_y = dict_lm['right_ankle_y']
-            
+
             current_pronation_angle = VectorCalculator.angle_to_horizontal(ankle_x, ankle_y, midpoint_x, midpoint_y)
             self.pronation_angle_history.append(current_pronation_angle)
             
@@ -116,15 +124,17 @@ class SquatRepetitionAnalyzerFrontal:
   
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
+                self.initial_midpoint_y = (self.heel_y_inicial + self.big_toe_y_inicial) / 2
+
                 self.initial_ankle_x = np.mean(self.ankle_x_history[-10:])
-
                 self.initial_angle_pronation = np.mean(self.pronation_angle_history[-10:])
-
+                                
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y) 
                 self.big_toe_y_history.append(big_toe_y)
                 self.ankle_x_history.append(ankle_x)
+
                 return
         
         self.ear_y_history.append(ear_y)
@@ -211,9 +221,38 @@ class SquatRepetitionAnalyzerFrontal:
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
-        foot_pronation_status = 0
-    
+    def _check_foot_pronation_midpoint(self, dict_lm, timestamp_ms):    
+        if self.initial_midpoint_y is None:
+            return 0 
+        
+        try:
+            heel_y = dict_lm['right_heel_y']
+            big_toe_y = dict_lm['right_big_toe_y']
+            
+            current_midpoint_y = (heel_y + big_toe_y) / 2
+            
+            #print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+
+
+            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
+                self.consecutive_foot_pronation_error_counter_midpoint += 1
+            else:
+                self.consecutive_foot_pronation_error_counter_midpoint = 0
+
+            if self.consecutive_foot_pronation_error_counter_midpoint >= self.FOOT_PRONATION_ERROR_THRESHOLD_MIDPOINT:
+                self.consecutive_foot_pronation_error_counter_midpoint = 0
+                return 1
+
+        except KeyError as e:
+            print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
+            self.consecutive_foot_pronation_error_counter_midpoint = 0
+        except Exception as e:
+            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
+            self.consecutive_foot_pronation_error_counter_midpoint = 0
+                
+        return 0
+
+    def _check_foot_pronation_line_inclination(self, dict_lm, timestamp_ms):    
         if self.initial_angle_pronation is None:
             return 0 
         
@@ -229,31 +268,74 @@ class SquatRepetitionAnalyzerFrontal:
 
             # Ajuste para garantir que a menor diferença angular seja usada
             angle_diff = min(angle_diff, 360 - angle_diff)
-            print(f"Ângulo Inicial: {self.initial_angle_pronation:.2f}, Ângulo Atual: {current_angle:.2f}, Diferença: {angle_diff:.2f}, segundo: {timestamp_ms/1000:.2f}")
 
             if angle_diff > self.PRONATION_ANGLE_TOLERANCE:
-
-                self.consecutive_foot_pronation_error_counter += 1
-                foot_pronation_status = 1
-
+                self.consecutive_foot_pronation_error_counter_line_inclination += 1
             else:
-                self.consecutive_foot_pronation_error_counter = 0
+                self.consecutive_foot_pronation_error_counter_line_inclination = 0
 
-          
+            #print(f"Ângulo Inicial: {self.initial_angle_pronation:.2f}, Ângulo Atual: {current_angle:.2f}, Diferença: {angle_diff:.2f}, segundo: {timestamp_ms/1000:.2f}")
 
-            if self.consecutive_foot_pronation_error_counter >= self.FOOT_PRONATION_ERROR_THRESHOLD:
-                self.total_foot_pronation_error_counter += 1
-                self.consecutive_foot_pronation_error_counter = 0
 
+            if self.consecutive_foot_pronation_error_counter_line_inclination >= self.FOOT_PRONATION_ERROR_THRESHOLD_LINE_INCLINATION:
+                self.consecutive_foot_pronation_error_counter_line_inclination = 0
+                return 1
                 
         except KeyError as e:
             print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
-            self.consecutive_foot_pronation_error_counter = 0
+            self.consecutive_foot_pronation_error_counter_line_inclination = 0
         except Exception as e:
             print(f"Erro inesperado ao calcular pronação do pé por ângulo: {e}")
-            self.consecutive_foot_pronation_error_counter = 0
+            self.consecutive_foot_pronation_error_counter_line_inclination = 0
                 
-        return foot_pronation_status
+        return 0
+
+    def _check_foot_pronation_ankle(self, dict_lm, timestamp_ms):        
+        try:
+            ankle_x = dict_lm['right_ankle_x']
+            
+            shift_in_x = abs(ankle_x - self.initial_ankle_x)
+            is_ankle_shifted = shift_in_x > self.ANKLE_X_TOLERANCE
+            
+            if is_ankle_shifted:
+                self.consecutive_foot_pronation_error_counter_ankle_variation += 1
+                #if (timestamp_ms/1000 > 8.15):
+                #print(f"Tornozelo inicial: {self.initial_ankle_x:.4f}, tonozelo atual: {ankle_x:.4f}, tempo: {timestamp_ms/1000:.2f}")
+            else:
+                self.consecutive_foot_pronation_error_counter_ankle_variation = 0
+
+            if self.consecutive_foot_pronation_error_counter_ankle_variation >= self.FOOT_PRONATION_ERROR_THRESHOLD_ANKLE_VARIATION:
+                self.consecutive_foot_pronation_error_counter_ankle_variation = 0
+                return 1
+    
+        except KeyError as e:
+            print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
+            self.consecutive_foot_pronation_error_counter_ankle_variation = 0
+        except Exception as e:
+            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
+            self.consecutive_foot_pronation_error_counter_ankle_variation = 0
+                
+        return 0
+
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
+        status = 0
+        midpoint_status = self._check_foot_pronation_midpoint(dict_lm, timestamp_ms)
+        #line_inclination_status = self._check_foot_pronation_line_inclination(dict_lm, timestamp_ms)
+        ankle_status = self._check_foot_pronation_ankle(dict_lm, timestamp_ms)
+
+        #if (midpoint_status == 1):
+        #    status = line_inclination_status
+        
+        if (midpoint_status == 0):
+            status = ankle_status
+        else:
+            status = midpoint_status
+        
+
+        if (status == 1):
+            self.total_foot_pronation_error_counter += 1
+
+        return status
 
     def _check_errors_frontal(self, dict_lm, timestamp_ms):
         hip_status = kn_valgus_status = foot_pronation_status = 0
