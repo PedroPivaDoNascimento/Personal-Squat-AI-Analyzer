@@ -9,15 +9,15 @@ from ultils.feedback_messages import feedback_messages
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
 
-def show_frontal_analysis(): 
+def show_frontal_right_analysis(): 
     """
     Função principal que monta a interface e gerencia o fluxo da análise frontal.
     """
         
-    st.title('Análise Frontal Direita - Agachamento')
+    st.title('Análise Frontal Direito - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     
-    uploaded_file_data = st.file_uploader('Envie o vídeo (Frontal Direita)', type=['mp4', 'avi', 'mov'])
+    uploaded_file_data = st.file_uploader('Envie o vídeo (Frontal Direito)', type=['mp4', 'avi', 'mov'])
     
 
     
@@ -73,7 +73,7 @@ def process_and_analyze_video(uploaded_file, name_input, params):
     ai.process_video(True, True) 
     st.success('Análise concluída!')
 
-    excel_writer = FrontalReportExcelWriter(name_input, ai.squat_analyzer)
+    excel_writer = FrontalReportExcelWriter(name_input, ai.squat_analyzer, "direito")
     excel_writer.generate_report()
     
     os.remove(temp_path)

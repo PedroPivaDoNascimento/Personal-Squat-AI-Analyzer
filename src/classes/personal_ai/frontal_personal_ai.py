@@ -2,7 +2,8 @@ import pandas as pd
 import cv2
 
 from .base_personal_ai import BaseAI 
-from ..squat_analyzer.squat_analyzer_frontal import SquatRepetitionAnalyzerFrontal 
+from ..squat_analyzer.frontal.right_frontal import RightFrontal 
+from ..squat_analyzer.frontal.left_frontal import LeftFrontal
 
 
 class FrontalAI(BaseAI):
@@ -12,7 +13,7 @@ class FrontalAI(BaseAI):
     def __init__(self, file_name, name_pessoa, model_path, 
                  descent_threshold=0.05, ascent_return_threshold=0.02, 
                  hip_error_threshold=5, knee_valgus_error_threshold=5, 
-                 foot_pronation_error_threshold=5):
+                 foot_pronation_error_threshold=5, side="right"):
         
         kwargs = {
             'descent_threshold': descent_threshold,
@@ -25,7 +26,13 @@ class FrontalAI(BaseAI):
         # user_height_cm foi passado como 0 (ou None) para satisfazer a BaseAI
         super().__init__(file_name, name_pessoa, 0, model_path, **kwargs)
         
-        self.squat_analyzer = SquatRepetitionAnalyzerFrontal(**kwargs)
+        if (side == "right"):
+            self.squat_analyzer = RightFrontal(**kwargs)
+        elif (side == "left"):
+            self.squat_analyzer = LeftFrontal(**kwargs)
+        else:
+            print("Erro ao definir o lado")
+            
         
         self.hip_tilt_df = pd.DataFrame(columns=["Tempo (ms)", "Desvio do Quadril"])
         self.knee_valgus_df = pd.DataFrame(columns=["Tempo (ms)", "Valgo de Joelho"])
