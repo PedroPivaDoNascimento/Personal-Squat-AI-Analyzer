@@ -25,7 +25,8 @@ def show_frontal_analysis():
     col_param1, col_param2 = st.columns(2)
     with col_param1:
         descent_th = st.slider('Sensibilidade da Descida (Repetição)', 0.01, 0.10, 0.05, 0.005, format='%.3f', help="Percentual de movimento da orelha para baixo para iniciar a contagem da repetição.")
-        hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
+        hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 5, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
+        
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
         
