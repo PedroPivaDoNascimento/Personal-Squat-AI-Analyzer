@@ -53,6 +53,12 @@ Siga estes passos para configurar e executar o projeto localmente:
     ```bash
     streamlit run src/main.py
     ```
+    ou
+
+    ```bash
+    python src/main.py
+    ```
+    
 2.  Coloque o nome da planilha que será gerada com os resultados e o vídeo que será processado.
 
 ## 📬 Contato
