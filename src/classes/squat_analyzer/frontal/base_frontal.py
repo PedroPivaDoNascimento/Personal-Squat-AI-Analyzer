@@ -76,32 +76,9 @@ class BaseFrontal(ABC):
     def _detect_repetition_phase(self, dict_lm, ts):
         pass
 
+    @abstractmethod
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
-        hip_status = 0
-        try:
-            x1, y1 = dict_lm['left_hip_x'], dict_lm['left_hip_y']
-            x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
-
-            angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
-            
-
-            if angle_deg > self.HIP_ANGLE_TOLERANCE:
-                self.consecutive_hip_error_counter += 1
-                hip_status = 1
-            else:
-                self.consecutive_hip_error_counter = 0
-
-            if self.consecutive_hip_error_counter >= self.HIP_ERROR_THRESHOLD:
-                self.total_hip_error_counter += 1
-                self.consecutive_hip_error_counter = 0
-
-
-                
-        except Exception as e:
-            print(f"Erro ao calcular inclinação do quadril: {e}")
-            self.consecutive_hip_error_counter = 0
-            
-        return hip_status
+        pass
 
     @abstractmethod
     def _check_knee_valgus_error(self, dict_lm, timestamp_ms):

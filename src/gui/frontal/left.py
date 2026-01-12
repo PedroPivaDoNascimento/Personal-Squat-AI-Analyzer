@@ -65,7 +65,7 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         file_name=temp_path, 
         name_pessoa=name_input, 
         model_path=MODEL_PATH,
-        **params 
+        **params, side="left" 
     )
     ai.process_video(True, True) 
     st.success('Análise concluída!')
