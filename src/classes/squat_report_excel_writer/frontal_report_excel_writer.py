@@ -5,9 +5,9 @@ from .base_squat_report_excel_writer import BaseSquatReportExcelWriter
 class FrontalReportExcelWriter(BaseSquatReportExcelWriter):
     """Implementação concreta para gerar relatórios do Plano Frontal."""
 
-    def __init__(self, person_name, squat_analyzer_instance):
+    def __init__(self, person_name, squat_analyzer_instance, side="direito"):
         # Define o nome da pasta como 'frontal'
-        super().__init__(person_name, squat_analyzer_instance, 'frontal') # <-- Define a pasta
+        super().__init__(person_name, squat_analyzer_instance, 'frontal', side=side) # <-- Define a pasta
 
     def _get_body_parts_data(self):
         # Partes do corpo específicas do plano frontal

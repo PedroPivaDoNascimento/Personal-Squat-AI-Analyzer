@@ -6,7 +6,7 @@ import os
 import streamlit as st
 
 class BaseSquatReportExcelWriter(ABC):
-    def __init__(self, person_name, squat_analyzer_instance, plane_folder_name, side="right"):
+    def __init__(self, person_name, squat_analyzer_instance, plane_folder_name, side="direito"):
         """
         Inicializa o gerador de relatórios Excel.
 
