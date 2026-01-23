@@ -79,12 +79,13 @@ class LeftFrontal(BaseFrontal):
             x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
 
             angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
-
-            #if (self.repetitions_detected == 1):
-            #    print(f"Angulo atual quadil é de {angle_deg:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite inferior é de {(self.HIP_ANGLE_TOLERANCE - 0.5)}, limite superior {(self.HIP_ANGLE_TOLERANCE + 6.2)}")
             
-            if angle_deg < (self.HIP_ANGLE_TOLERANCE - 0.5) or (angle_deg > (self.HIP_ANGLE_TOLERANCE + 6.2)):
-                
+            #if (timestamp_ms/1000 > 3 and timestamp_ms/1000 <= 5) or (timestamp_ms/1000 > 7 and timestamp_ms/1000 <= 9) or (timestamp_ms/1000 > 10 and timestamp_ms/1000 <= 12):
+            #    print(f"Angulo atual quadil é de {angle_deg:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f} limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
+            
+            if angle_deg < self.HIP_ANGLE_TOLERANCE - 0.5:
+                #if (self.repetitions_detected != 1):
+                #    print(f"Repetição {(self.repetitions_detected+1)}: Ângulo atual quadril é de {angle_deg:.2f} e ocorreu esse erro no segundo {timestamp_ms/1000:.2f}. Limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
                 self.consecutive_hip_error_counter += 1
                 hip_status = 1
             else:
@@ -115,10 +116,12 @@ class LeftFrontal(BaseFrontal):
             
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
-            #print(f"Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
+        
+            print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
 
-            if abs(angle_hka) < self.KNEE_ANGLE_MIN:
-                #print(f"{angle_hka:.2f}")
+            if angle_hka > 0:
+                #if (self.repetitions_detected == 0):
+                #    print(f"Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
             else:

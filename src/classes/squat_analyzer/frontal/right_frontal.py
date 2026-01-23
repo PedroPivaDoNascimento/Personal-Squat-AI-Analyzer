@@ -111,7 +111,7 @@ class RightFrontal(BaseFrontal):
             
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
-            if angle_hka < self.KNEE_ANGLE_MIN and angle_hka < 0:
+            if angle_hka < 0:
                 #print(f"{angle_hka:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
