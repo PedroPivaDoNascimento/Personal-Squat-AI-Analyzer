@@ -27,9 +27,9 @@ class FrontalAI(BaseAI):
         super().__init__(file_name, name_pessoa, 0, model_path, **kwargs)
         
         if (side == "right"):
-            self.squat_analyzer = RightFrontal(**kwargs)
+            self.squat_analyzer = RightFrontal(**kwargs, side="direito", person_name=name_pessoa)
         elif (side == "left"):
-            self.squat_analyzer = LeftFrontal(**kwargs)
+            self.squat_analyzer = LeftFrontal(**kwargs, side="esquerdo", person_name=name_pessoa)
         else:
             print("Erro ao definir o lado")
             

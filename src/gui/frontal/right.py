@@ -3,7 +3,8 @@ import pandas as pd
 import os
 
 from classes.personal_ai.frontal_personal_ai import FrontalAI as PersonalAI
-from classes.squat_report_excel_writer.frontal_report_excel_writer import FrontalReportExcelWriter
+from classes.excel.squat_report_excel_writer.frontal_report_excel_writer import FrontalReportExcelWriter
+from classes.excel.set_folders import SetFolders
 from ultils.feedback_messages import feedback_messages
 
 MODEL_PATH = 'models/pose_landmarker_full.task'
@@ -29,7 +30,7 @@ def show_frontal_right_analysis():
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
         
-        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
+        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 12, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
         foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 7 , 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
 
 
@@ -43,6 +44,9 @@ def show_frontal_right_analysis():
     
     # 2. Processamento e Exibição de Resultados
     if uploaded_file_data and name_input:
+        set_folders = SetFolders(person_name=name_input, plane_folder_name="frontal", side="direito")
+        set_folders.create_folders()
+
         ai_instance = process_and_analyze_video(uploaded_file_data, name_input, params)
         
         display_overall_summary(ai_instance.squat_analyzer, name_input)
@@ -68,7 +72,7 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         file_name=temp_path, 
         name_pessoa=name_input, 
         model_path=MODEL_PATH,
-        **params 
+        **params,  
     )
     ai.process_video(True, True) 
     st.success('Análise concluída!')

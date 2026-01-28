@@ -3,9 +3,6 @@ import numpy as np
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
 
-
-# TODO Terminar os calculos de cada parte, testar eles
-
 class RightFrontal(BaseFrontal):
     
     def create_dictionary_landmarks(self, lm_obj):
@@ -17,7 +14,7 @@ class RightFrontal(BaseFrontal):
                 'right_ankle_x': lm_obj[28].x, 'right_ankle_y': lm_obj[28].y,
                 'right_big_toe_x': lm_obj[32].x, 'right_big_toe_y': lm_obj[32].y,
                 'right_ear_y': lm_obj[7].y,
-                'right_heel_y': lm_obj[30].y,
+                'right_heel_y': lm_obj[30].y,    'right_heel_x': lm_obj[30].x
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -72,6 +69,26 @@ class RightFrontal(BaseFrontal):
                     self.current_phase = 'inicial'
                     self.min_y_in_rep = None
 
+    def _get_foot_data(self, dict_lm):
+        """
+        Retorna um dicionário com as seguintes chaves:
+        - right_ankle_x: coordenada x do tornozelo direito
+        - right_ankle_y: coordenada y do tornozelo direito
+        - right_big_toe_x: coordenada x do dedo do pé direito
+        - right_big_toe_y: coordenada y do dedo do pé direito
+        - right_heel_x: coordenada x do calcanhar direito
+        - right_heel_y: coordenada y do calcanhar direito
+        """
+
+        return {
+           'ankle_x': dict_lm['right_ankle_x'],
+           'ankle_y': dict_lm['right_ankle_y'],
+           'big_toe_x': dict_lm['right_big_toe_x'],
+           'big_toe_y': dict_lm['right_big_toe_y'],
+           'heel_x': dict_lm['right_heel_x'],
+           'heel_y': dict_lm['right_heel_y']
+        }
+        
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
             hip_status = 0
             try:
@@ -111,7 +128,7 @@ class RightFrontal(BaseFrontal):
             
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
-            if angle_hka < self.KNEE_ANGLE_MIN and angle_hka < 0:
+            if angle_hka < 0:
                 #print(f"{angle_hka:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
@@ -123,8 +140,6 @@ class RightFrontal(BaseFrontal):
                 self.consecutive_knee_valgus_error_counter = 0
                 #print(f"Angulo atual é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
 
-
-                
         except Exception as e:
             print(f"Erro ao calcular valgo de joelho: {e}")
             self.consecutive_knee_valgus_error_counter = 0
@@ -148,7 +163,7 @@ class RightFrontal(BaseFrontal):
             if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
                 self.consecutive_foot_pronation_error_counter += 1
                 foot_pronation_status = 1
-                print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+                #print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
 
 
             else:

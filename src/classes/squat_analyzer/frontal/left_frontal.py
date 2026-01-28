@@ -3,12 +3,25 @@ import numpy as np
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
 
-
-# TODO Terminar os calculos de cada parte, testar eles
-
 class LeftFrontal(BaseFrontal):
     
     def create_dictionary_landmarks(self, lm_obj):
+        """
+        Cria um dicionário com as seguintes chaves:
+        - right_hip_x: coordenada x do quadril do pé direito
+        - right_hip_y: coordenada y do quadril do pé direito
+        - left_hip_x: coordenada x do quadril do pé esquerdo
+        - left_hip_y: coordenada y do quadril do pé esquerdo
+        - left_knee_x: coordenada x do joelho esquerdo
+        - left_knee_y: coordenada y do joelho esquerdo
+        - left_ankle_x: coordenada x do tornozelo esquerdo
+        - left_ankle_y: coordenada y do tornozelo esquerdo
+        - left_big_toe_x: coordenada x do dedo do pé esquerdo
+        - left_big_toe_y: coordenada y do dedo do pé esquerdo
+        - left_ear_y: coordenada y da orelha esquerda
+        - left_heel_y: coordenada y do calcanhar esquerdo
+        - left_heel_x: coordenada x do calcanhar esquerdo
+        """
         try:
             return {
                 'right_hip_x': lm_obj[24].x, 'right_hip_y': lm_obj[24].y,
@@ -17,7 +30,7 @@ class LeftFrontal(BaseFrontal):
                 'left_ankle_x': lm_obj[27].x, 'left_ankle_y': lm_obj[27].y,
                 'left_big_toe_x': lm_obj[31].x, 'left_big_toe_y': lm_obj[31].y,
                 'left_ear_y': lm_obj[7].y, 
-                'left_heel_y': lm_obj[29].y,
+                'left_heel_y': lm_obj[29].y,     'left_heel_x': lm_obj[29].x
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -72,6 +85,25 @@ class LeftFrontal(BaseFrontal):
                     self.current_phase = 'inicial'
                     self.min_y_in_rep = None
 
+    def _get_foot_data(self, dict_lm):
+        """
+        Retorna um dicionário com as seguintes chaves:
+        - left_ankle_x: coordenada x do tornozelo esquerdo
+        - left_ankle_y: coordenada y do tornozelo esquerdo
+        - left_big_toe_x: coordenada x do dedo do pé esquerdo
+        - left_big_toe_y: coordenada y do dedo do pé esquerdo
+        - left_heel_x: coordenada x do calcanhar esquerdo
+        - left_heel_y: coordenada y do calcanhar esquerdo
+        """
+        
+        return {
+            'ankle_x': dict_lm['left_ankle_x'],
+            'ankle_y': dict_lm['left_ankle_y'],
+            'big_toe_x': dict_lm['left_big_toe_x'],
+            'big_toe_y': dict_lm['left_big_toe_y'],
+            'heel_x': dict_lm['left_heel_x'],
+            'heel_y': dict_lm['left_heel_y']
+        }
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
         hip_status = 0
         try:
@@ -79,12 +111,13 @@ class LeftFrontal(BaseFrontal):
             x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
 
             angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
-
-            #if (self.repetitions_detected == 1):
-            #    print(f"Angulo atual quadil é de {angle_deg:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite inferior é de {(self.HIP_ANGLE_TOLERANCE - 0.5)}, limite superior {(self.HIP_ANGLE_TOLERANCE + 6.2)}")
             
-            if angle_deg < (self.HIP_ANGLE_TOLERANCE - 0.5) or (angle_deg > (self.HIP_ANGLE_TOLERANCE + 6.2)):
-                
+            #if (timestamp_ms/1000 > 3 and timestamp_ms/1000 <= 5) or (timestamp_ms/1000 > 7 and timestamp_ms/1000 <= 9) or (timestamp_ms/1000 > 10 and timestamp_ms/1000 <= 12):
+            #    print(f"Angulo atual quadil é de {angle_deg:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f} limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
+            
+            if angle_deg < self.HIP_ANGLE_TOLERANCE - 0.5:
+                #if (self.repetitions_detected != 1):
+                #    print(f"Repetição {(self.repetitions_detected+1)}: Ângulo atual quadril é de {angle_deg:.2f} e ocorreu esse erro no segundo {timestamp_ms/1000:.2f}. Limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
                 self.consecutive_hip_error_counter += 1
                 hip_status = 1
             else:
@@ -115,10 +148,12 @@ class LeftFrontal(BaseFrontal):
             
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
-            #print(f"Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
+        
+            print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
 
-            if abs(angle_hka) < self.KNEE_ANGLE_MIN:
-                #print(f"{angle_hka:.2f}")
+            if angle_hka > 0:
+                #if (self.repetitions_detected == 0):
+                #    print(f"Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
             else:
