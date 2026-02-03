@@ -129,9 +129,13 @@ class RightFrontal(BaseFrontal):
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
             if angle_hka < 0:
-                #print(f"{angle_hka:.2f}")
                 self.consecutive_knee_valgus_error_counter += 1
                 kn_valgus_status = 1
+                
+                # Verificando o tamanho do contador entre os intervalos de 5 e 12
+                if self.consecutive_knee_valgus_error_counter >= 5 and self.consecutive_knee_valgus_error_counter <= 12:
+                    print(f" Repetição {(self.repetitions_detected+1)}: ocorreu no segundo {timestamp_ms/1000:.2f} e o valor atual do contador é de {self.consecutive_knee_valgus_error_counter}")
+
             else:
                 self.consecutive_knee_valgus_error_counter = 0
 
@@ -139,7 +143,7 @@ class RightFrontal(BaseFrontal):
                 self.total_knee_valgus_error_counter += 1
                 self.consecutive_knee_valgus_error_counter = 0
                 #print(f"Angulo atual é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}")
-
+ 
         except Exception as e:
             print(f"Erro ao calcular valgo de joelho: {e}")
             self.consecutive_knee_valgus_error_counter = 0

@@ -149,7 +149,7 @@ class LeftFrontal(BaseFrontal):
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
         
-            print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
+            #print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
 
             if angle_hka > 0:
                 #if (self.repetitions_detected == 0):
@@ -173,7 +173,6 @@ class LeftFrontal(BaseFrontal):
 
     def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
         foot_pronation_status = 0
-    
     
         if self.initial_midpoint_y is None:
             return 0 

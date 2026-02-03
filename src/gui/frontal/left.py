@@ -27,13 +27,13 @@ def show_frontal_left_analysis():
         hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
-        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 12, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
+        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
         foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 7 , 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
 
     params = {
         'descent_threshold': descent_th,
         'ascent_return_threshold': ascent_return_th,
-        'hip_error_threshold': hip_err_th,
+        'hip_error_threshold': hip_err_th,  
         'knee_valgus_error_threshold': knee_valgus_th,     
         'foot_pronation_error_threshold': foot_pronation_th 
     }

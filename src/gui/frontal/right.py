@@ -15,12 +15,22 @@ def show_frontal_right_analysis():
     Função principal que monta a interface e gerencia o fluxo da análise frontal.
     """
         
+    st.write("Marque as repetições que você quer salvar os dados no arquivo:")
+    # Criando os checkboxes e armazenando o estado (True/False)
+    c1 = st.checkbox("Salvar repetição 1")
+    c2 = st.checkbox("Salvar repetição 2")
+    c3 = st.checkbox("Salvar repetição 3")
+
+    # Criando o vetor baseado no que foi marcado
+    opcoes_marcadas = []
+    if c1: opcoes_marcadas.append(1)
+    if c2: opcoes_marcadas.append(2)
+    if c3: opcoes_marcadas.append(3)
+    
     st.title('Análise Frontal Direito - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     
     uploaded_file_data = st.file_uploader('Envie o vídeo (Frontal Direito)', type=['mp4', 'avi', 'mov'])
-    
-
     
     st.write('### Parâmetros de Avaliação do Exercício')
     col_param1, col_param2 = st.columns(2)
@@ -47,7 +57,7 @@ def show_frontal_right_analysis():
         set_folders = SetFolders(person_name=name_input, plane_folder_name="frontal", side="direito")
         set_folders.create_folders()
 
-        ai_instance = process_and_analyze_video(uploaded_file_data, name_input, params)
+        ai_instance = process_and_analyze_video(uploaded_file_data, name_input, params, opcoes_marcadas)
         
         display_overall_summary(ai_instance.squat_analyzer, name_input)
         
@@ -59,7 +69,7 @@ def show_frontal_right_analysis():
             display_no_repetitions_found_message()
 
 
-def process_and_analyze_video(uploaded_file, name_input, params):
+def process_and_analyze_video(uploaded_file, name_input, params, opcoes_marcadas):
     """Salva o vídeo, inicializa a IA, processa e gera o relatório."""
     ext = os.path.splitext(uploaded_file.name)[1]
     temp_path = f'temp_frontal_dir{ext}' 
@@ -72,7 +82,8 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         file_name=temp_path, 
         name_pessoa=name_input, 
         model_path=MODEL_PATH,
-        **params,  
+        **params,
+        options_marcadas=opcoes_marcadas  
     )
     ai.process_video(True, True) 
     st.success('Análise concluída!')

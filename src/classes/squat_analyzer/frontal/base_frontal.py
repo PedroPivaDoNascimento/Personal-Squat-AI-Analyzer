@@ -5,10 +5,11 @@ class BaseFrontal(ABC):
     
     def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, 
                  hip_error_threshold=5, knee_valgus_error_threshold=5, 
-                 foot_pronation_error_threshold=5, side="", person_name=""):
+                 foot_pronation_error_threshold=5, side="", person_name="", options_marcadas=[]):
         
         self.DESCENT_THRESHOLD = descent_threshold
         self.ASCENT_RETURN_THRESHOLD = ascent_return_threshold
+        self.options_marcadas = options_marcadas
         
         # Thresholds para Contagem de Erros (mantidos como parâmetros)
         self.HIP_ERROR_THRESHOLD = hip_error_threshold
@@ -89,6 +90,7 @@ class BaseFrontal(ABC):
         if dict_lm == {}:
             return hip, kn_valgus, foot_pronation
         
+        # Pego os dados do pé e coloco no vetor onde tem os dados da repetição de pé
         foot_data = self._get_foot_data(dict_lm)
         self.foot_repeat_data.append(foot_data)
         
@@ -153,8 +155,12 @@ class BaseFrontal(ABC):
             self.total_foot_pronation_error_counter = 0
             # Os consecutivos serão resetados no 'inicial'
 
-            foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
-            foot_data_excel_writer.write_foot_data()
+            if self.repetitions_detected in self.options_marcadas:
+                foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
+                foot_data_excel_writer.write_raw_foot_data()
+                foot_data_excel_writer.write_statistic_foot_data()
+
+            self.foot_repeat_data = []
 
   
     def finalize_analysis(self):
