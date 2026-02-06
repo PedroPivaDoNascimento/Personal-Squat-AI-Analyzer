@@ -122,7 +122,10 @@ class BaseFrontal(ABC):
             
             hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
             kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
-            foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms)
+            if (self.side == 'esquerdo'):
+                foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms)
+            else:
+                foot_pronation_status = 0
         
         return hip_status, kn_valgus_status, foot_pronation_status
 
@@ -137,7 +140,11 @@ class BaseFrontal(ABC):
             
             hip_rep_result = 1 if self.total_hip_error_counter > 0 else 0
             knee_rep_result = 1 if self.total_knee_valgus_error_counter > 0 else 0
-            foot_rep_result = 1 if self.total_foot_pronation_error_counter > 0 else 0
+            if (self.side == 'esquerdo'):
+                foot_rep_result = 1 if self.total_foot_pronation_error_counter > 0 else 0
+            else:
+                # Agora iremos cálcular o teste do pé usando IA
+                foot_rep_result = self._check_foot_pronation_error()
             
             self.reps['hip'].append(hip_rep_result)
             self.reps['knee_valgus'].append(knee_rep_result)

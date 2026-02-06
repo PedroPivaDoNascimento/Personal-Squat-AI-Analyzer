@@ -66,7 +66,7 @@ class FootDataExcelWriter:
         
         return df
     
-    def _convert_data_to_statistic_pandas(self):
+    def convert_data_to_statistic_pandas(self):
         """
         Calcula estatísticas (média, mediana, desvio padrão, etc.) para cada coluna 
         e organiza tudo em uma única linha.
@@ -152,7 +152,7 @@ class FootDataExcelWriter:
         file_path = os.path.join(path_folder_repetition, 'dados_pe.xlsx')
 
         # Converte os dados atuais para o formato de uma linha larga
-        df_novo = self._convert_data_to_statistic_pandas()
+        df_novo = self.convert_data_to_statistic_pandas()
         
         if not df_novo.empty:
             try:
