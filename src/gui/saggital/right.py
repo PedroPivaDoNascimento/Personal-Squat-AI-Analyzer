@@ -4,7 +4,10 @@ import os
 
 from classes.personal_ai.saggital_personal_ai import SagittalAI as PersonalAI
 from ultils.feedback_messages import feedback_messages
-from classes.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
+from classes.excel.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
+from classes.excel.set_folders import SetFolders
+
+
 MODEL_PATH = 'models/pose_landmarker_full.task'
 
 def show_sagittal_right_analysis(): 
@@ -39,6 +42,9 @@ def show_sagittal_right_analysis():
     }
     
     if uploaded_file_data and name_input and user_height_cm:
+        set_folders = SetFolders(person_name=name_input, plane_folder_name="sagital", side="direito")
+        set_folders.create_folders()
+
         ai_instance = process_and_analyze_video(uploaded_file_data, name_input, user_height_cm, params)
         
         display_overall_summary(ai_instance.squat_analyzer, name_input)

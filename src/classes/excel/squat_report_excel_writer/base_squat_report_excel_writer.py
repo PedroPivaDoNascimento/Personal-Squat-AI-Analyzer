@@ -97,8 +97,12 @@ class BaseSquatReportExcelWriter(ABC):
 
 
     def _save_report_to_excel(self, df_report):
+        
         """
-        Cria pastas, subpastas (plano e lado) e salva o relatório. 
+        Salva o relatório gerado em um arquivo Excel no diretório especificado.
+        
+        Args:
+            df_report (pandas.DataFrame): O DataFrame com os dados do relatório.
         """
         
         output_folder = 'planilhas'
@@ -111,10 +115,6 @@ class BaseSquatReportExcelWriter(ABC):
         side_folder_name = self.side.lower() 
         final_output_folder = os.path.join(plane_output_folder, side_folder_name) 
         
-        # Cria a estrutura de pastas (planilhas/plano/lado)
-        if not os.path.exists(final_output_folder):
-            os.makedirs(final_output_folder)
-
         # Define o caminho completo do arquivo
         file_path = os.path.join(final_output_folder, f"{self.person_name}_Relatorio_{self.plane_folder_name}_{side_folder_name}.xlsx") # Adicionei nome do plano e lado ao nome do arquivo para clareza
 

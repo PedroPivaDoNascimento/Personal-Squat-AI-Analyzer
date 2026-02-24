@@ -13,7 +13,7 @@ class FrontalAI(BaseAI):
     def __init__(self, file_name, name_pessoa, model_path, 
                  descent_threshold=0.05, ascent_return_threshold=0.02, 
                  hip_error_threshold=5, knee_valgus_error_threshold=5, 
-                 foot_pronation_error_threshold=5, side="right"):
+                 foot_pronation_error_threshold=5, side="right", options_marcadas=[]):
         
         kwargs = {
             'descent_threshold': descent_threshold,
@@ -22,14 +22,16 @@ class FrontalAI(BaseAI):
             'knee_valgus_error_threshold': knee_valgus_error_threshold,   
             'foot_pronation_error_threshold': foot_pronation_error_threshold,
         }
+
+        self.options_marcadas = options_marcadas
         
         # user_height_cm foi passado como 0 (ou None) para satisfazer a BaseAI
         super().__init__(file_name, name_pessoa, 0, model_path, **kwargs)
         
         if (side == "right"):
-            self.squat_analyzer = RightFrontal(**kwargs)
+            self.squat_analyzer = RightFrontal(**kwargs, side="direito", person_name=name_pessoa, options_marcadas=options_marcadas)
         elif (side == "left"):
-            self.squat_analyzer = LeftFrontal(**kwargs)
+            self.squat_analyzer = LeftFrontal(**kwargs, side="esquerdo", person_name=name_pessoa, options_marcadas=options_marcadas)
         else:
             print("Erro ao definir o lado")
             

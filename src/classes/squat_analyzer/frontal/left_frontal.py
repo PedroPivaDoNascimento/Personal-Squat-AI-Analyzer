@@ -1,14 +1,31 @@
 import numpy as np
+import os
+import joblib
 
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
+from classes.excel.foot_data_excel_writer import FootDataExcelWriter
 
-
-# TODO Terminar os calculos de cada parte, testar eles
 
 class LeftFrontal(BaseFrontal):
     
     def create_dictionary_landmarks(self, lm_obj):
+        """
+        Cria um dicionário com as seguintes chaves:
+        - right_hip_x: coordenada x do quadril do pé direito
+        - right_hip_y: coordenada y do quadril do pé direito
+        - left_hip_x: coordenada x do quadril do pé esquerdo
+        - left_hip_y: coordenada y do quadril do pé esquerdo
+        - left_knee_x: coordenada x do joelho esquerdo
+        - left_knee_y: coordenada y do joelho esquerdo
+        - left_ankle_x: coordenada x do tornozelo esquerdo
+        - left_ankle_y: coordenada y do tornozelo esquerdo
+        - left_big_toe_x: coordenada x do dedo do pé esquerdo
+        - left_big_toe_y: coordenada y do dedo do pé esquerdo
+        - left_ear_y: coordenada y da orelha esquerda
+        - left_heel_y: coordenada y do calcanhar esquerdo
+        - left_heel_x: coordenada x do calcanhar esquerdo
+        """
         try:
             return {
                 'right_hip_x': lm_obj[24].x, 'right_hip_y': lm_obj[24].y,
@@ -17,7 +34,7 @@ class LeftFrontal(BaseFrontal):
                 'left_ankle_x': lm_obj[27].x, 'left_ankle_y': lm_obj[27].y,
                 'left_big_toe_x': lm_obj[31].x, 'left_big_toe_y': lm_obj[31].y,
                 'left_ear_y': lm_obj[7].y, 
-                'left_heel_y': lm_obj[29].y,
+                'left_heel_y': lm_obj[29].y,     'left_heel_x': lm_obj[29].x
             }
         except Exception as e:
             print(f"Erro ao criar dicionário de landmarks: {e}")
@@ -72,6 +89,25 @@ class LeftFrontal(BaseFrontal):
                     self.current_phase = 'inicial'
                     self.min_y_in_rep = None
 
+    def _get_foot_data(self, dict_lm):
+        """
+        Retorna um dicionário com as seguintes chaves:
+        - left_ankle_x: coordenada x do tornozelo esquerdo
+        - left_ankle_y: coordenada y do tornozelo esquerdo
+        - left_big_toe_x: coordenada x do dedo do pé esquerdo
+        - left_big_toe_y: coordenada y do dedo do pé esquerdo
+        - left_heel_x: coordenada x do calcanhar esquerdo
+        - left_heel_y: coordenada y do calcanhar esquerdo
+        """
+        
+        return {
+            'ankle_x': dict_lm['left_ankle_x'],
+            'ankle_y': dict_lm['left_ankle_y'],
+            'big_toe_x': dict_lm['left_big_toe_x'],
+            'big_toe_y': dict_lm['left_big_toe_y'],
+            'heel_x': dict_lm['left_heel_x'],
+            'heel_y': dict_lm['left_heel_y']
+        }
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
         hip_status = 0
         try:
@@ -117,7 +153,7 @@ class LeftFrontal(BaseFrontal):
             angle_hka = VectorCalculator.calculate_angle_3p(x1, y1, x2, y2, x3, y3)
             
         
-            print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
+            #print(f"Repetição {(self.repetitions_detected+1)}: Angulo atual joelho é de {angle_hka:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f}, limite é de {self.KNEE_ANGLE_MIN}")
 
             if angle_hka > 0:
                 #if (self.repetitions_detected == 0):
@@ -139,39 +175,18 @@ class LeftFrontal(BaseFrontal):
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
-        foot_pronation_status = 0
-    
-    
-        if self.initial_midpoint_y is None:
-            return 0 
+    def _check_foot_pronation_error(self):
+        foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
+        static_data = foot_data_excel_writer.convert_data_to_statistic_pandas()
+        X = static_data.iloc[:, 2:].values
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_esquerdo.pkl")
+        model = joblib.load(model_path)
+
+        y_pred = model.predict(X)
+        foot_pronation_status = y_pred[0]
         
-        try:
-            heel_y = dict_lm['left_heel_y']
-            big_toe_y = dict_lm['left_big_toe_y']
-            
-            current_midpoint_y = (heel_y + big_toe_y) / 2
-            
-            #print(f"Calcanhar Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
-
-    
-            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
-                self.consecutive_foot_pronation_error_counter += 1
-                foot_pronation_status = 1
-
-            else:
-                self.consecutive_foot_pronation_error_counter = 0
-
-            if self.consecutive_foot_pronation_error_counter >= self.FOOT_PRONATION_ERROR_THRESHOLD:
-                self.total_foot_pronation_error_counter += 1
-                self.consecutive_foot_pronation_error_counter = 0
-
-        except KeyError as e:
-            print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
-            self.consecutive_foot_pronation_error_counter = 0
-        except Exception as e:
-            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
-            self.consecutive_foot_pronation_error_counter = 0
-                
         return foot_pronation_status
+        
   

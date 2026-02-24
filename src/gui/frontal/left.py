@@ -3,7 +3,8 @@ import pandas as pd
 import os
 
 from classes.personal_ai.frontal_personal_ai import FrontalAI as PersonalAI
-from classes.squat_report_excel_writer.frontal_report_excel_writer import FrontalReportExcelWriter
+from classes.excel.squat_report_excel_writer.frontal_report_excel_writer import FrontalReportExcelWriter
+from classes.excel.set_folders import SetFolders
 from ultils.feedback_messages import feedback_messages
 
 MODEL_PATH = 'models/pose_landmarker_full.task'
@@ -14,6 +15,18 @@ def show_frontal_left_analysis():
     Função principal que monta a interface e gerencia o fluxo da análise frontal.
     """
         
+    st.write("Marque as repetições que você quer salvar os dados no arquivo:")
+    # Criando os checkboxes e armazenando o estado (True/False)
+    c1 = st.checkbox("Salvar repetição 1")
+    c2 = st.checkbox("Salvar repetição 2")
+    c3 = st.checkbox("Salvar repetição 3")
+
+    # Criando o vetor baseado no que foi marcado
+    opcoes_marcadas = []
+
+    if c1: opcoes_marcadas.append(1)
+    if c2: opcoes_marcadas.append(2)
+    if c3: opcoes_marcadas.append(3)    
     st.title('Análise Frontal Esquerdo - Agachamento')
     name_input = st.text_input('Nome da pessoa')
     
@@ -26,22 +39,23 @@ def show_frontal_left_analysis():
         hip_err_th = st.slider('Tolerância de Desvio - Quadril (Duração Permitida)', 1, 150, 1, 1, help="Número de instantes que o quadril pode estar desalinhado antes de ser considerado um erro na repetição.")
     with col_param2:
         ascent_return_th = st.slider('Tolerância de Retorno na Subida (Repetição)', 0.005, 0.05, 0.02, 0.005, format='%.3f', help="Percentual de proximidade da posição inicial da orelha para finalizar a contagem da repetição.")
-        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 12, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
+        knee_valgus_th = st.slider('Tolerância de Desvio - Joelho (Valgo/Varo)', 1, 150, 5, 1, help="Número de instantes que o joelho pode estar em valgo ou varo antes de ser considerado um erro na repetição.")
         foot_pronation_th = st.slider('Tolerância de Desvio - Pé (Pronação)', 1, 150, 7 , 1, help="Número de instantes que o pé pode estar pronado antes de ser considerado um erro na repetição.")
-
-#antes joelho era 5
 
     params = {
         'descent_threshold': descent_th,
         'ascent_return_threshold': ascent_return_th,
-        'hip_error_threshold': hip_err_th,
+        'hip_error_threshold': hip_err_th,  
         'knee_valgus_error_threshold': knee_valgus_th,     
         'foot_pronation_error_threshold': foot_pronation_th 
     }
     
     # 2. Processamento e Exibição de Resultados
     if uploaded_file_data and name_input:
-        ai_instance = process_and_analyze_video(uploaded_file_data, name_input, params)
+        set_folders = SetFolders(person_name=name_input, plane_folder_name="frontal", side="esquerdo")
+        set_folders.create_folders()
+
+        ai_instance = process_and_analyze_video(uploaded_file_data, name_input, params, opcoes_marcadas)
         
         display_overall_summary(ai_instance.squat_analyzer, name_input)
         
@@ -53,7 +67,7 @@ def show_frontal_left_analysis():
             display_no_repetitions_found_message()
 
 
-def process_and_analyze_video(uploaded_file, name_input, params):
+def process_and_analyze_video(uploaded_file, name_input, params, opcoes_marcadas):
     """Salva o vídeo, inicializa a IA, processa e gera o relatório."""
     ext = os.path.splitext(uploaded_file.name)[1]
     temp_path = f'temp_frontal_dir{ext}' 
@@ -66,7 +80,8 @@ def process_and_analyze_video(uploaded_file, name_input, params):
         file_name=temp_path, 
         name_pessoa=name_input, 
         model_path=MODEL_PATH,
-        **params, side="left" 
+        **params, side="left",
+        options_marcadas=opcoes_marcadas
     )
     ai.process_video(True, True) 
     st.success('Análise concluída!')
