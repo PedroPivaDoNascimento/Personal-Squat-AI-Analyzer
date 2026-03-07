@@ -180,29 +180,43 @@ class BaseSaggital(ABC):
             self.repetitions_detected += 1
             self.repetition_timestamps.append(current_ts / 1000)
             
-    def finalize_analysis(self):
-        if self.repetitions_detected == 0 and self.current_phase != 'inicial':
-            print("Nenhuma repetição completa detectada neste vídeo. Preenchendo slots com 0.")
-            for i in range(3):
-                for key in ['head', 'trunk', 'heel', 'knee']:
-                    self.reps[key].append(0)
-                self.repetition_timestamps.append(None)
-                self.trunk_error_history.append(0)
-                self.knee_error_history.append(0)
-                self.head_error_history.append(0)
-                self.foot_error_history.append(0)
-                print(f"  Slot para Repetição {i+1} preenchido com 0.")
-        else:
-            num_detected = self.repetitions_detected
-            if num_detected < 3:
-                print(f"{num_detected} repetição(ões) completa(s) detectada(s). Preenchendo slots restantes com 0.")
+    def finalize_analysis(self, current_ts):
+        """
+        Finaliza a análise de repetições detectadas.
+
+        Se o voluntário fez menos de 2 repetições, preenche os slots restantes com 0.
+        Se a 3ª repetição começou mas não terminou (voluntário parou no meio), completa a repetição.
+
+        Args:
+            current_ts (int): O timestamp atual em milissegundos.
+        """
+        if self.repetitions_detected == 2:
+            self._complete_repetition(current_ts=current_ts)
+            return
+        
+        num_detected = self.repetitions_detected
+        reps_to_fill = 3 - num_detected
+
+        for _ in range(reps_to_fill):
+            for key in self.reps.keys():
+                self.reps[key].append(0)
             
-            for i in range(num_detected, 3):
-                for key in ['head', 'trunk', 'heel', 'knee']:
-                    self.reps[key].append(0)
-                self.repetition_timestamps.append(None)
-                self.trunk_error_history.append(0)
-                self.knee_error_history.append(0)
-                self.head_error_history.append(0)
-                self.foot_error_history.append(0)
-                print(f"  Slot para Repetição {i+1} preenchido com 0.")
+            self._fill_error_histories(value=0)
+            self.repetition_timestamps.append(None)
+
+    
+    def _fill_error_histories(self, value):
+        """
+        Preenche as históricos de erros com um valor específico.
+        
+        Args:
+            value (int): O valor a ser preenchido nas históricos de erros.
+        """
+        histories = [
+            self.trunk_error_history, 
+            self.knee_error_history, 
+            self.head_error_history,
+            self.foot_error_history
+        ]
+        for hist in histories:
+            hist.append(value)

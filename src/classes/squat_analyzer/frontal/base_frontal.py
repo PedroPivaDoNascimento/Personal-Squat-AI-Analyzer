@@ -163,17 +163,42 @@ class BaseFrontal(ABC):
             self.foot_repeat_data = []
 
   
-    def finalize_analysis(self):
-        """Garante que a estrutura de 3 repetições esteja completa."""
+    def finalize_analysis(self, current_ts):
+        """
+        Finaliza a análise de repetições detectadas.
+
+        Se o voluntário fez menos de 2 repetições, preenche os slots restantes com 0.
+        Se a 3ª repetição começou mas não terminou (voluntário parou no meio), completa a repetição.
+
+        Args:
+            current_ts (int): O timestamp atual em milissegundos.
+        """
         num_detected = self.repetitions_detected
-        if num_detected < 3:
-            for i in range(num_detected, 3):
-                for key in ['hip', 'knee_valgus', 'foot_pronation']:
-                    self.reps[key].append(0)
-                
-                # Preenche os novos históricos de contagem com 0
-                self.hip_error_history.append(0)
-                self.knee_valgus_error_history.append(0)
-                self.foot_pronation_error_history.append(0)
-                    
-                self.repetition_timestamps.append(None)
+
+        if num_detected == 2:
+            self._complete_repetition(current_ts=current_ts)
+            return
+
+        reps_to_fill = 3 - num_detected
+        
+        for _ in range(reps_to_fill):
+            for key in self.reps.keys():
+                self.reps[key].append(0)
+            
+            self._fill_error_histories(value=0)
+            self.repetition_timestamps.append(None)
+
+    def _fill_error_histories(self, value):
+        """
+        Preenche as históricos de erros com um valor específico.
+        
+        Args:
+            value (int): O valor a ser preenchido nasæ históricos de erros.
+        """
+        histories = [
+            self.hip_error_history, 
+            self.knee_valgus_error_history, 
+            self.foot_pronation_error_history
+        ]
+        for hist in histories:
+            hist.append(value)
