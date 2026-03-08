@@ -183,9 +183,9 @@ class BaseFrontal(ABC):
         
         for _ in range(reps_to_fill):
             for key in self.reps.keys():
-                self.reps[key].append(0)
+                self.reps[key].append(-1)
             
-            self._fill_error_histories(value=0)
+            self._fill_error_histories(value=-1)
             self.repetition_timestamps.append(None)
 
     def _fill_error_histories(self, value):

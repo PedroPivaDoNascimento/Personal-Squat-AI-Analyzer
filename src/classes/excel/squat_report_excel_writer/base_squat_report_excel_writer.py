@@ -48,7 +48,8 @@ class BaseSquatReportExcelWriter(ABC):
 
     def _fill_repetition_data(self, df_report):
         """
-        Preenche as colunas de status de repetição (0 ou 1) e Resultado.
+        Preenche as colunas de status de repetição (-1, 0 ou 1) e o Resultado final.
+        Implementa a lógica de maioria para definir o status da análise.
         """
         body_part_map_internal_to_display = self._get_internal_map_status()
         
@@ -57,18 +58,26 @@ class BaseSquatReportExcelWriter(ABC):
             internal_key = body_part_map_internal_to_display.get(parte_display_name)
             
             if internal_key is None:
-                padded_reps_status = [0, 0, 0]
+                padded_reps_status = [-1, -1, -1]
             else:
                 reps_status = self.analyzer.reps.get(internal_key, [])
                 
-                # Preenche e limita a 3 repetições
-                padded_reps_status = [(val if val is not None else 0) for val in (reps_status + [None, None, None])[:3]]
+                padded_reps_status = [(val if val is not None else -1) for val in (reps_status + [None, None, None])[:3]]
 
             df_report.loc[index, 'Repetição 1'] = padded_reps_status[0]
             df_report.loc[index, 'Repetição 2'] = padded_reps_status[1]
             df_report.loc[index, 'Repetição 3'] = padded_reps_status[2]
             
-            resultado = 1 if sum(padded_reps_status) >= 2 else 0
+            count_erros = padded_reps_status.count(1)
+            count_nao_identificado = padded_reps_status.count(-1)
+            
+            if count_nao_identificado >= 2:
+                resultado = -1  
+            elif count_erros >= 2:
+                resultado = 1   
+            else:
+                resultado = 0 
+                
             df_report.loc[index, 'Resultado'] = resultado
             
             
