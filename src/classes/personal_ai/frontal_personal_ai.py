@@ -1,6 +1,8 @@
 import pandas as pd
 import cv2
 
+from classes.images.video_processor import VideoProcessor
+
 from .base_personal_ai import BaseAI 
 from ..squat_analyzer.frontal.right_frontal import RightFrontal 
 from ..squat_analyzer.frontal.left_frontal import LeftFrontal
@@ -62,12 +64,15 @@ class FrontalAI(BaseAI):
         ts = 0
         current_hip, current_kn_valgus, current_foot_pronation = 0, 0, 0
         
+        video_processor = VideoProcessor("pe_esquerdo")
+        video_processor.set_up_folders()
+
         try:
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
                     break
-                    
+
                 self.frame += 1
                 ts += 1000 / fps
                 
@@ -77,7 +82,7 @@ class FrontalAI(BaseAI):
                 landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
                 
                 current_hip, current_kn_valgus, current_foot_pronation = \
-                    self.squat_analyzer.process_frame_landmarks(landmarks, ts)
+                    self.squat_analyzer.process_frame_landmarks(landmarks, ts, frame)
                 
                 self._add_dataframe_data(ts, current_hip, current_kn_valgus, current_foot_pronation)
 

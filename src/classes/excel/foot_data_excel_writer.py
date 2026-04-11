@@ -68,10 +68,10 @@ class FootDataExcelWriter:
     
     def convert_data_to_statistic_pandas(self):
         """
-        Calcula estatísticas (média, mediana, desvio padrão, etc.) para cada coluna 
-        e organiza tudo em uma única linha.
+        Calcula estatísticas (média, mediana, desvio padrão, percentis e IQR) 
+        para cada coluna e organiza tudo em uma única linha.
         """
-        # 1. Cria o DataFrame temporário com os dados brutos (da imagem)
+        # 1. Cria o DataFrame temporário com os dados brutos
         df_temp = pd.DataFrame(self.foot_repeat_data)
         
         # 2. Lista para armazenar os valores calculados e os nomes das colunas
@@ -82,26 +82,45 @@ class FootDataExcelWriter:
         for coluna in df_temp.columns:
             dados = df_temp[coluna]
             
-            # Cálculos estatísticos
-            media = dados.mean()
-            mediana = dados.median()
+            # Cálculos estatísticos existentes
+            #media = dados.mean()
+            #mediana = dados.median()
             desvio_padrao = dados.std()
-            maximo = dados.max()
-            minimo = dados.min()
-            amplitude = maximo - minimo
+            #maximo = dados.max()
+            #minimo = dados.min()
+            #amplitude = maximo - minimo
             
-            # Adiciona os valores à nossa lista de dados
-            estatisticas_linha.extend([media, mediana, desvio_padrao, maximo, minimo, amplitude])
+            # Novas métricas: Percentis e IQR
+            #p95 = dados.quantile(0.95)
+            #p5 = dados.quantile(0.05)
+            #q75 = dados.quantile(0.75)
+            #q25 = dados.quantile(0.25)
+            #iqr = q75 - q25
             
-            # Cria rótulos descritivos para facilitar a leitura no Excel
+            # Adiciona os valores à lista de dados
+            #estatisticas_linha.extend([
+            #    media, mediana, desvio_padrao, maximo, minimo, amplitude, 
+            #    p95, p5, iqr
+            #])
+
+            estatisticas_linha.extend([
+                desvio_padrao
+            ])
+
+            #estatisticas_linha.extend([desvio_padrao])
+            
+            # Cria rótulos descritivos
             prefixo = str(coluna)
             nomes_colunas.extend([
-                f'{prefixo}_media', 
-                f'{prefixo}_mediana', 
-                f'{prefixo}_std', 
-                f'{prefixo}_max', 
-                f'{prefixo}_min', 
-                f'{prefixo}_amplitude'
+                #f'{prefixo}_media', 
+                #f'{prefixo}_mediana', 
+                f'{prefixo}_std',
+                #f'{prefixo}_max', 
+                #f'{prefixo}_min', 
+                #f'{prefixo}_amplitude',
+                #f'{prefixo}_p95',
+                #f'{prefixo}_p5',
+                #f'{prefixo}_iqr'
             ])
 
         # 4. Cria o DataFrame final com uma única linha e colunas rotuladas
@@ -156,10 +175,8 @@ class FootDataExcelWriter:
         
         if not df_novo.empty:
             try:
-                # Garante que a pasta existe
                 os.makedirs(path_folder_repetition, exist_ok=True)
 
-                # Lógica para acumular dados
                 if os.path.exists(file_path):
                     # Se o arquivo existe, lê o conteúdo atual
                     df_existente = pd.read_excel(file_path, engine='openpyxl')
