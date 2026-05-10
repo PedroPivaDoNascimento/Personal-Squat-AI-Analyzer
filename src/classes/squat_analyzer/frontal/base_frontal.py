@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 
 from classes.excel.foot_data_excel_writer import FootDataExcelWriter
+from ...images.video_processor import VideoProcessor
+from classes.excel.pixels_excel_writer import PixelsDataExcelWriter
+
 class BaseFrontal(ABC):
     
     def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, 
@@ -56,8 +59,14 @@ class BaseFrontal(ABC):
         # Resultados por Repetição (status booleano 0/1)
         self.reps = {'hip': [], 'knee_valgus': [], 'foot_pronation': []}
         self.repetition_timestamps = []
-
         self.foot_repeat_data = []
+
+        self.video_processor = VideoProcessor("pe_esquerdo")
+
+        self.history_whites_pixels_with_time_stamp_s = {}
+        self.pixel_excel_writer = PixelsDataExcelWriter(person_name=self.person_name, plane_folder_name="frontal", side=self.side)
+
+
     
     @abstractmethod
     def create_dictionary_landmarks(self, lm_obj):
@@ -69,7 +78,7 @@ class BaseFrontal(ABC):
 
     
 
-    def process_frame_landmarks(self, landmarks_obj, timestamp_ms):
+    def process_frame_landmarks(self, landmarks_obj, timestamp_ms, frame):
         """
         Processa os landmarks de uma frame e retorna os status de erro de quadril, joelho valgo e pronacao do pé.
         
@@ -95,7 +104,7 @@ class BaseFrontal(ABC):
         self.foot_repeat_data.append(foot_data)
         
         self._detect_repetition_phase(dict_lm, timestamp_ms)
-        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms)
+        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms, frame)
         
         return hip, kn_valgus, foot_pronation
 
@@ -112,20 +121,21 @@ class BaseFrontal(ABC):
        pass
 
     @abstractmethod
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
         pass
 
-    def _check_errors_frontal(self, dict_lm, timestamp_ms):
+    @abstractmethod
+    def _get_center_point_foot(self, dict_lm):
+        pass
+
+    def _check_errors_frontal(self, dict_lm, timestamp_ms, frame):
         hip_status = kn_valgus_status = foot_pronation_status = 0
 
         if self.current_phase in ['descendo', 'subindo']:
             
             hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
             kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
-            if (self.side == 'esquerdo'):
-                foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms)
-            else:
-                foot_pronation_status = 0
+            foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms, frame)
         
         return hip_status, kn_valgus_status, foot_pronation_status
 
@@ -135,16 +145,13 @@ class BaseFrontal(ABC):
         self.consecutive_knee_valgus_error_counter = 0
         self.consecutive_foot_pronation_error_counter = 0
 
+
     def _complete_repetition(self, current_ts):        
         if self.repetitions_detected < 3:
             
             hip_rep_result = 1 if self.total_hip_error_counter > 0 else 0
             knee_rep_result = 1 if self.total_knee_valgus_error_counter > 0 else 0
-            if (self.side == 'esquerdo'):
-                foot_rep_result = 1 if self.total_foot_pronation_error_counter > 0 else 0
-            else:
-                # Agora iremos cálcular o teste do pé usando IA
-                foot_rep_result = self._check_foot_pronation_error()
+            foot_rep_result = 1 if self.total_foot_pronation_error_counter > 0 else 0
             
             self.reps['hip'].append(hip_rep_result)
             self.reps['knee_valgus'].append(knee_rep_result)
@@ -169,18 +176,51 @@ class BaseFrontal(ABC):
 
             self.foot_repeat_data = []
 
+
+
+
   
-    def finalize_analysis(self):
-        """Garante que a estrutura de 3 repetições esteja completa."""
+    def finalize_analysis(self, current_ts):
+        """
+        Finaliza a análise de repetições detectadas.
+
+        Se o voluntário fez menos de 2 repetições, preenche os slots restantes com 0.
+        Se a 3ª repetição começou mas não terminou (voluntário parou no meio), completa a repetição.
+
+        Args:
+            current_ts (int): O timestamp atual em milissegundos.
+        """
         num_detected = self.repetitions_detected
-        if num_detected < 3:
-            for i in range(num_detected, 3):
-                for key in ['hip', 'knee_valgus', 'foot_pronation']:
-                    self.reps[key].append(0)
-                
-                # Preenche os novos históricos de contagem com 0
-                self.hip_error_history.append(0)
-                self.knee_valgus_error_history.append(0)
-                self.foot_pronation_error_history.append(0)
-                    
-                self.repetition_timestamps.append(None)
+
+        if num_detected == 2:
+            self._complete_repetition(current_ts=current_ts)
+            return
+
+        reps_to_fill = 3 - num_detected
+        
+        for _ in range(reps_to_fill):
+            for key in self.reps.keys():
+                self.reps[key].append(-1)
+            
+            self._fill_error_histories(value=-1)
+            self.repetition_timestamps.append(None)
+
+        self.pixel_excel_writer.write_num_pixels_data(self.history_whites_pixels_with_time_stamp_s)
+        
+
+        
+
+    def _fill_error_histories(self, value):
+        """
+        Preenche as históricos de erros com um valor específico.
+        
+        Args:
+            value (int): O valor a ser preenchido nasæ históricos de erros.
+        """
+        histories = [
+            self.hip_error_history, 
+            self.knee_valgus_error_history, 
+            self.foot_pronation_error_history
+        ]
+        for hist in histories:
+            hist.append(value)

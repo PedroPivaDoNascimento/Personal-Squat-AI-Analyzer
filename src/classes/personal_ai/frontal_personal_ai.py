@@ -1,6 +1,8 @@
 import pandas as pd
 import cv2
 
+from classes.images.video_processor import VideoProcessor
+
 from .base_personal_ai import BaseAI 
 from ..squat_analyzer.frontal.right_frontal import RightFrontal 
 from ..squat_analyzer.frontal.left_frontal import LeftFrontal
@@ -31,7 +33,7 @@ class FrontalAI(BaseAI):
         if (side == "right"):
             self.squat_analyzer = RightFrontal(**kwargs, side="direito", person_name=name_pessoa, options_marcadas=options_marcadas)
         elif (side == "left"):
-            self.squat_analyzer = LeftFrontal(**kwargs, side="esquerdo", person_name=name_pessoa)
+            self.squat_analyzer = LeftFrontal(**kwargs, side="esquerdo", person_name=name_pessoa, options_marcadas=options_marcadas)
         else:
             print("Erro ao definir o lado")
             
@@ -41,6 +43,18 @@ class FrontalAI(BaseAI):
         self.foot_pronation_df = pd.DataFrame(columns=["Tempo (ms)", "Pronação do Pé"])
 
 
+    def _add_dataframe_data(self, ts, hip, knee, foot):
+        """
+        Adiciona os dados nos dataframes correspondentes ao plano frontal.
+        """
+        data_map = [
+            (self.hip_tilt_df, hip), 
+            (self.knee_valgus_df, knee),
+            (self.foot_pronation_df, foot)
+        ]
+        for df, val in data_map:
+            if df is not None:
+                df.loc[len(df)] = [int(ts), val]
     def process_video(self, draw, display):
         """
         Implementação concreta: Lógica de processamento de frames para o plano frontal.
@@ -48,50 +62,49 @@ class FrontalAI(BaseAI):
         cap = cv2.VideoCapture(self.file_name)
         fps = cap.get(cv2.CAP_PROP_FPS) or 30
         ts = 0
+        current_hip, current_kn_valgus, current_foot_pronation = 0, 0, 0
         
+        video_processor = VideoProcessor("pe_esquerdo")
+        video_processor.set_up_folders()
+
         try:
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
                     break
-                    
+
                 self.frame += 1
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 ts += 1000 / fps
                 
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 res = self.pose_detector.detect(rgb)
                 
-                current_hip, current_kn_valgus, current_foot_pronation = 0, 0, 0 
+                landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
                 
-                if res.pose_landmarks and res.pose_landmarks[0]:
-                    current_hip, current_kn_valgus, current_foot_pronation = \
-                        self.squat_analyzer.process_frame_landmarks(res.pose_landmarks[0], ts)
-                else:
-                    self.squat_analyzer.process_frame_landmarks(None, ts)
+                current_hip, current_kn_valgus, current_foot_pronation = \
+                    self.squat_analyzer.process_frame_landmarks(landmarks, ts, frame)
                 
-                # Adiciona os dados ao DataFrame (Adaptado para Frontal)
-                for df, val in [
-                    (self.hip_tilt_df, current_hip), 
-                    (self.knee_valgus_df, current_kn_valgus),
-                    (self.foot_pronation_df, current_foot_pronation)
-                ]:
-                    if df is not None:
-                        df.loc[len(df)] = [int(ts), val]
+                self._add_dataframe_data(ts, current_hip, current_kn_valgus, current_foot_pronation)
 
                 if draw:
                     frame = self.draw_landmarks(rgb, res)
-
                 if display:
                     cv2.imshow('Frame', frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
+                        
         except Exception as e:
             print(f"ATENÇÃO: Ocorreu um erro durante o processamento do vídeo: {e}")
         finally:
             cap.release()
             cv2.destroyAllWindows()
             self.pose_detector.close()
-        
-        self.squat_analyzer.finalize_analysis()
+
+            self.squat_analyzer.finalize_analysis(current_ts=ts)
+            
+            num_detected = self.squat_analyzer.repetitions_detected
+            for i in range(num_detected, 3):
+                ts += 1
+                self._add_dataframe_data(ts, 0, 0, 0)
         
         self.image_q.put((1, 1, 'done'))

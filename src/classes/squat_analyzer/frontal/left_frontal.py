@@ -1,10 +1,22 @@
 import numpy as np
+import os
+import joblib
+import cv2 as cv
 
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
 
+
+
 class LeftFrontal(BaseFrontal):
     
+    def __init__(self, options_marcadas, person_name, side, descent_threshold=0.05, ascent_return_threshold=0.02, hip_error_threshold=5, knee_valgus_error_threshold=5,
+                 foot_pronation_error_threshold=5):
+        self.history_whites_pixels = []
+        super().__init__(options_marcadas=options_marcadas, person_name=person_name, side=side, descent_threshold=descent_threshold, 
+                         ascent_return_threshold=ascent_return_threshold, hip_error_threshold=hip_error_threshold, knee_valgus_error_threshold=knee_valgus_error_threshold,
+                         foot_pronation_error_threshold=foot_pronation_error_threshold)
+
     def create_dictionary_landmarks(self, lm_obj):
         """
         Cria um dicionário com as seguintes chaves:
@@ -104,6 +116,12 @@ class LeftFrontal(BaseFrontal):
             'heel_x': dict_lm['left_heel_x'],
             'heel_y': dict_lm['left_heel_y']
         }
+    
+    def _get_center_point_foot(self, dict_lm):
+        mean_x = np.mean([dict_lm['left_ankle_x'], dict_lm['left_big_toe_x'], dict_lm['left_heel_x']]) 
+        mean_y = np.mean([dict_lm['left_ankle_y'], dict_lm['left_big_toe_y'], dict_lm['left_heel_y']]) 
+        return mean_x, mean_y
+
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
         hip_status = 0
         try:
@@ -171,38 +189,39 @@ class LeftFrontal(BaseFrontal):
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
-        foot_pronation_status = 0
-    
-        if self.initial_midpoint_y is None:
-            return 0 
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
+        mean_x, mean_y = self._get_center_point_foot(dict_lm)
+        cut_frame = self.video_processor.crop_roi(frame, mean_x, mean_y)
+        num_withed_pixels = self.video_processor.count_white_pixels(cut_frame)
+
+        foot_proanation_status = 0
+
+        self.history_whites_pixels_with_time_stamp_s[f"{timestamp_ms/1000:.2f}"] = num_withed_pixels
+        self.history_whites_pixels.append(num_withed_pixels)
+
+        if len(self.history_whites_pixels) <= 1:
+            return foot_proanation_status
         
+        relative_increase_white_pixels = 0
         try:
-            heel_y = dict_lm['left_heel_y']
-            big_toe_y = dict_lm['left_big_toe_y']
-            
-            current_midpoint_y = (heel_y + big_toe_y) / 2
-            
-            #print(f"Calcanhar Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+            relative_increase_white_pixels = (num_withed_pixels - self.history_whites_pixels[-2]) / self.history_whites_pixels[-2]
+        except ZeroDivisionError:
+            pass
 
-    
-            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
-                self.consecutive_foot_pronation_error_counter += 1
-                foot_pronation_status = 1
-
-            else:
-                self.consecutive_foot_pronation_error_counter = 0
-
-            if self.consecutive_foot_pronation_error_counter >= self.FOOT_PRONATION_ERROR_THRESHOLD:
-                self.total_foot_pronation_error_counter += 1
-                self.consecutive_foot_pronation_error_counter = 0
-
-        except KeyError as e:
-            print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
+        if relative_increase_white_pixels > 0.05:
+            self.consecutive_foot_pronation_error_counter += 1
+            foot_proanation_status = 1
+        else:
             self.consecutive_foot_pronation_error_counter = 0
-        except Exception as e:
-            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
+
+        if self.consecutive_foot_pronation_error_counter >= 5:
+            self.total_foot_pronation_error_counter += 1
             self.consecutive_foot_pronation_error_counter = 0
-                
-        return foot_pronation_status
+
+        return foot_proanation_status
+
+
+         
+       
+
   
