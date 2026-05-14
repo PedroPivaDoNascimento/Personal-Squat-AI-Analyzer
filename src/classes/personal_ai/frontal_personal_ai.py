@@ -103,7 +103,7 @@ class FrontalAI(BaseAI):
             self.squat_analyzer.finalize_analysis(current_ts=ts)
             
             num_detected = self.squat_analyzer.repetitions_detected
-            for i in range(num_detected, 3):
+            for _ in range(num_detected, 3):
                 ts += 1
                 self._add_dataframe_data(ts, 0, 0, 0)
         

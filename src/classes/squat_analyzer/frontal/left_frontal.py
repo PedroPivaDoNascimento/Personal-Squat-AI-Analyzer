@@ -189,36 +189,82 @@ class LeftFrontal(BaseFrontal):
             
         return kn_valgus_status
 
+    def _should_sample_data(self, timestamp_ms, interval_ms=500):
+        """
+        Garante a captura do PRIMEIRO frame encontrado (seja ele qual for)
+        e mantém o intervalo de 500ms a partir dele.
+        """
+        # Se a variável não existir, criamos como None
+        if not hasattr(self, 'last_save_ts'):
+            self.last_save_ts = None 
+
+        # É o primeiríssimo frame que o código encontra
+        if self.last_save_ts is None:
+            self.last_save_ts = timestamp_ms
+            return True
+
+        # Já salvamos algo, agora conferimos se passou o intervalo
+        if timestamp_ms >= self.last_save_ts + interval_ms:
+            self.last_save_ts = timestamp_ms
+            return True
+        
+        return False
+
     def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
+        """Método responsável por cálculo a pronação do pé
+
+        Args:
+            dict_lm (Dict[str, Any]): Dicionário com os landmarks
+            timestamp_ms (float): Timestamp em milisegundos
+            frame (int): Frame
+
+        Returns:
+            int: Status da pronação do pé
+        """
+        # Extrair os dados brutos
         mean_x, mean_y = self._get_center_point_foot(dict_lm)
         cut_frame = self.video_processor.crop_roi(frame, mean_x, mean_y)
         num_withed_pixels = self.video_processor.count_white_pixels(cut_frame)
 
-        foot_proanation_status = 0
+        # Setar o status da pronação com a antiga variação, verificação usada para caso o frame não esteja no intervalo de 500 ms
+        foot_pronation_status = getattr(self, 'current_foot_status', 0)
 
-        self.history_whites_pixels_with_time_stamp_s[f"{timestamp_ms/1000:.2f}"] = num_withed_pixels
-        self.history_whites_pixels.append(num_withed_pixels)
+        # Verificar se o timestamp deve ser salvo
+        if self._should_sample_data(timestamp_ms, interval_ms=500):
+            
+            # Ações de gravação
+            self.history_whites_pixels_with_time_stamp_s[f"{timestamp_ms/1000:.2f}"] = num_withed_pixels
+            self.history_whites_pixels.append(num_withed_pixels)
 
-        if len(self.history_whites_pixels) <= 1:
-            return foot_proanation_status
-        
-        relative_increase_white_pixels = 0
-        try:
-            relative_increase_white_pixels = (num_withed_pixels - self.history_whites_pixels[-2]) / self.history_whites_pixels[-2]
-        except ZeroDivisionError:
-            pass
+            # Se não houver histórico suficiente para comparar, encerramos a análise deste frame
+            if len(self.history_whites_pixels) <= 1:
+                return foot_pronation_status
 
-        if relative_increase_white_pixels > 0.05:
-            self.consecutive_foot_pronation_error_counter += 1
-            foot_proanation_status = 1
-        else:
-            self.consecutive_foot_pronation_error_counter = 0
+            # Ações de cálculo matemático
+            relative_increase_white_pixels = 0
+            try:
+                ultimo = num_withed_pixels
+                penultimo = self.history_whites_pixels[-2]
+                relative_increase_white_pixels = (ultimo - penultimo) / penultimo
+            except ZeroDivisionError:
+                pass
 
-        if self.consecutive_foot_pronation_error_counter >= 5:
-            self.total_foot_pronation_error_counter += 1
-            self.consecutive_foot_pronation_error_counter = 0
+            # Ações de atualização de contadores de erro
+            if 0.4 < relative_increase_white_pixels < 1.5:
+                self.consecutive_foot_pronation_error_counter += 1
+                foot_pronation_status = 1
+            else:   
+                self.consecutive_foot_pronation_error_counter = 0
 
-        return foot_proanation_status
+            if self.consecutive_foot_pronation_error_counter >= 2:
+                self.total_foot_pronation_error_counter += 1
+                self.consecutive_foot_pronation_error_counter = 0
+            
+            # Guardamos o status atualizado para os frames "vazios" seguintes
+            self.current_foot_status = foot_pronation_status
+
+        # Retorna o status (se estiver fora do IF de 500ms, ele retorna o último valor calculado)
+        return foot_pronation_status
 
 
          
