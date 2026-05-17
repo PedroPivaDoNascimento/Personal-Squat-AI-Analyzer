@@ -63,7 +63,7 @@ class BaseFrontal(ABC):
 
         self.video_processor = VideoProcessor("pe_esquerdo")
 
-        self.history_whites_pixels_with_time_stamp_s = {}
+        self.history_whites_pixels_with_frame = {}
         self.pixel_excel_writer = PixelsDataExcelWriter(person_name=self.person_name, plane_folder_name="frontal", side=self.side)
 
 
@@ -78,13 +78,15 @@ class BaseFrontal(ABC):
 
     
 
-    def process_frame_landmarks(self, landmarks_obj, timestamp_ms, frame):
+    def process_frame_landmarks(self, landmarks_obj, timestamp_ms, frame, frame_number):
         """
         Processa os landmarks de uma frame e retorna os status de erro de quadril, joelho valgo e pronacao do pé.
         
         Parameters:
         landmarks_obj (Landmark): Landmarks da frame
         timestamp_ms (int): Timestamp da frame em milissegundos
+        frame: Frame atual
+        frame_number (int): Número do frame atual
         
         Returns:
         hip (int): Status de erro de quadril (0 - sem erro, 1 - com erro)
@@ -99,14 +101,15 @@ class BaseFrontal(ABC):
         if dict_lm == {}:
             return hip, kn_valgus, foot_pronation
         
-        # Pego os dados do pé e coloco no vetor onde tem os dados da repetição de pé
+        # Pego os dados do pé e coloco no vetor onde tem os dados da repetição de pé
         foot_data = self._get_foot_data(dict_lm)
         self.foot_repeat_data.append(foot_data)
         
         self._detect_repetition_phase(dict_lm, timestamp_ms)
-        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms, frame)
+        hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms, frame, frame_number)
         
         return hip, kn_valgus, foot_pronation
+
 
     @abstractmethod
     def _detect_repetition_phase(self, dict_lm, ts):
@@ -128,14 +131,14 @@ class BaseFrontal(ABC):
     def _get_center_point_foot(self, dict_lm):
         pass
 
-    def _check_errors_frontal(self, dict_lm, timestamp_ms, frame):
+    def _check_errors_frontal(self, dict_lm, timestamp_ms, frame, frame_number):
         hip_status = kn_valgus_status = foot_pronation_status = 0
 
         if self.current_phase in ['descendo', 'subindo']:
             
             hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
             kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
-            foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms, frame)
+            foot_pronation_status = self._check_foot_pronation_error(dict_lm, timestamp_ms, frame, frame_number)
         
         return hip_status, kn_valgus_status, foot_pronation_status
 
@@ -205,7 +208,7 @@ class BaseFrontal(ABC):
             self._fill_error_histories(value=-1)
             self.repetition_timestamps.append(None)
 
-        self.pixel_excel_writer.write_num_pixels_data(self.history_whites_pixels_with_time_stamp_s)
+        self.pixel_excel_writer.write_num_pixels_data(self.history_whites_pixels_with_frame)
         
 
         

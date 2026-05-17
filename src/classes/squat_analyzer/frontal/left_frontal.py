@@ -13,6 +13,7 @@ class LeftFrontal(BaseFrontal):
     def __init__(self, options_marcadas, person_name, side, descent_threshold=0.05, ascent_return_threshold=0.02, hip_error_threshold=5, knee_valgus_error_threshold=5,
                  foot_pronation_error_threshold=5):
         self.history_whites_pixels = []
+        self.history_whites_pixels_with_frame = {}
         super().__init__(options_marcadas=options_marcadas, person_name=person_name, side=side, descent_threshold=descent_threshold, 
                          ascent_return_threshold=ascent_return_threshold, hip_error_threshold=hip_error_threshold, knee_valgus_error_threshold=knee_valgus_error_threshold,
                          foot_pronation_error_threshold=foot_pronation_error_threshold)
@@ -210,13 +211,14 @@ class LeftFrontal(BaseFrontal):
         
         return False
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame, frame_number):
         """Método responsável por cálculo a pronação do pé
 
         Args:
             dict_lm (Dict[str, Any]): Dicionário com os landmarks
-            timestamp_ms (float): Timestamp em milisegundos
+            timestamp_ms (float): Timestamp em milissegundos
             frame (int): Frame
+            frame_number (int): Número do frame atual
 
         Returns:
             int: Status da pronação do pé
@@ -227,13 +229,13 @@ class LeftFrontal(BaseFrontal):
         num_withed_pixels = self.video_processor.count_white_pixels(cut_frame)
 
         # Setar o status da pronação com a antiga variação, verificação usada para caso o frame não esteja no intervalo de 500 ms
-        foot_pronation_status = getattr(self, 'current_foot_status', 0)
+        foot_pronation_status = getattr(self, "current_foot_status", 0)
 
         # Verificar se o timestamp deve ser salvo
         if self._should_sample_data(timestamp_ms, interval_ms=500):
             
-            # Ações de gravação
-            self.history_whites_pixels_with_time_stamp_s[f"{timestamp_ms/1000:.2f}"] = num_withed_pixels
+            # Ações de gravação - agora salva por número do frame
+            self.history_whites_pixels_with_frame[frame_number] = num_withed_pixels
             self.history_whites_pixels.append(num_withed_pixels)
 
             # Se não houver histórico suficiente para comparar, encerramos a análise deste frame
@@ -265,6 +267,7 @@ class LeftFrontal(BaseFrontal):
 
         # Retorna o status (se estiver fora do IF de 500ms, ele retorna o último valor calculado)
         return foot_pronation_status
+
 
 
          

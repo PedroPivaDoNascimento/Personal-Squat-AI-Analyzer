@@ -82,7 +82,7 @@ class FrontalAI(BaseAI):
                 landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
                 
                 current_hip, current_kn_valgus, current_foot_pronation = \
-                    self.squat_analyzer.process_frame_landmarks(landmarks, ts, frame)
+                    self.squat_analyzer.process_frame_landmarks(landmarks, ts, frame, self.frame)
                 
                 self._add_dataframe_data(ts, current_hip, current_kn_valgus, current_foot_pronation)
 
