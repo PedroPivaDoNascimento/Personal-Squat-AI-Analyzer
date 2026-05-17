@@ -250,13 +250,13 @@ class LeftFrontal(BaseFrontal):
                 pass
 
             # Ações de atualização de contadores de erro
-            if 0.4 < relative_increase_white_pixels < 1.5:
+            if 0.6 < relative_increase_white_pixels < 3:
                 self.consecutive_foot_pronation_error_counter += 1
                 foot_pronation_status = 1
             else:   
                 self.consecutive_foot_pronation_error_counter = 0
 
-            if self.consecutive_foot_pronation_error_counter >= 2:
+            if self.consecutive_foot_pronation_error_counter >= 1:
                 self.total_foot_pronation_error_counter += 1
                 self.consecutive_foot_pronation_error_counter = 0
             

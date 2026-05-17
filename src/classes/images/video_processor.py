@@ -92,6 +92,6 @@ class VideoProcessor():
         gray_diff = cv.cvtColor(diff, cv.COLOR_BGR2GRAY)
 
         # Binarização
-        _, binary_image = cv.threshold(gray_diff, 40, 255, cv.THRESH_BINARY)
+        _, binary_image = cv.threshold(gray_diff, 50, 255, cv.THRESH_BINARY)
         
         return cv.countNonZero(binary_image)
