@@ -13,6 +13,8 @@ class LeftFrontal(BaseFrontal):
     def __init__(self, options_marcadas, person_name, side, descent_threshold=0.05, ascent_return_threshold=0.02, hip_error_threshold=5, knee_valgus_error_threshold=5,
                  foot_pronation_error_threshold=5):
         self.history_whites_pixels = []
+        self.history_whites_pixels_with_frame = {}
+        self.sequential_frame_counter = 0  # Contador sequencial para frames válidos (1, 2, 3...)
         super().__init__(options_marcadas=options_marcadas, person_name=person_name, side=side, descent_threshold=descent_threshold, 
                          ascent_return_threshold=ascent_return_threshold, hip_error_threshold=hip_error_threshold, knee_valgus_error_threshold=knee_valgus_error_threshold,
                          foot_pronation_error_threshold=foot_pronation_error_threshold)
@@ -66,7 +68,7 @@ class LeftFrontal(BaseFrontal):
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
                 self.initial_midpoint_y = (self.heel_y_inicial + self.big_toe_y_inicial) / 2
-                                
+                
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y) 
@@ -145,7 +147,6 @@ class LeftFrontal(BaseFrontal):
                 self.total_hip_error_counter += 1
                 self.consecutive_hip_error_counter = 0
 
-
                 
         except Exception as e:
             print(f"Erro ao calcular inclinação do quadril: {e}")
@@ -181,7 +182,6 @@ class LeftFrontal(BaseFrontal):
                 self.total_knee_valgus_error_counter += 1
                 self.consecutive_knee_valgus_error_counter = 0
 
-
                 
         except Exception as e:
             print(f"Erro ao calcular valgo de joelho: {e}")
@@ -210,13 +210,14 @@ class LeftFrontal(BaseFrontal):
         
         return False
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame, frame_number):
         """Método responsável por cálculo a pronação do pé
 
         Args:
             dict_lm (Dict[str, Any]): Dicionário com os landmarks
-            timestamp_ms (float): Timestamp em milisegundos
+            timestamp_ms (float): Timestamp em milissegundos
             frame (int): Frame
+            frame_number (int): Número do frame atual
 
         Returns:
             int: Status da pronação do pé
@@ -227,13 +228,16 @@ class LeftFrontal(BaseFrontal):
         num_withed_pixels = self.video_processor.count_white_pixels(cut_frame)
 
         # Setar o status da pronação com a antiga variação, verificação usada para caso o frame não esteja no intervalo de 500 ms
-        foot_pronation_status = getattr(self, 'current_foot_status', 0)
+        foot_pronation_status = getattr(self, "current_foot_status", 0)
 
         # Verificar se o timestamp deve ser salvo
         if self._should_sample_data(timestamp_ms, interval_ms=500):
             
-            # Ações de gravação
-            self.history_whites_pixels_with_time_stamp_s[f"{timestamp_ms/1000:.2f}"] = num_withed_pixels
+            # Incrementa o contador sequencial para obter o próximo número de frame ordinal (1, 2, 3...)
+            self.sequential_frame_counter += 1
+            
+            # Ações de gravação - salva usando o contador sequencial como chave (frame1, frame2, frame3...)
+            self.history_whites_pixels_with_frame[self.sequential_frame_counter] = num_withed_pixels
             self.history_whites_pixels.append(num_withed_pixels)
 
             # Se não houver histórico suficiente para comparar, encerramos a análise deste frame
@@ -265,9 +269,3 @@ class LeftFrontal(BaseFrontal):
 
         # Retorna o status (se estiver fora do IF de 500ms, ele retorna o último valor calculado)
         return foot_pronation_status
-
-
-         
-       
-
-  

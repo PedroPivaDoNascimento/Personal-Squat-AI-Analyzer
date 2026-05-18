@@ -22,9 +22,14 @@ class PixelsDataExcelWriter:
         return os.path.normpath(path_folder_num_pixels)
      
 
-    def write_num_pixels_data(self, history_whites_pixels_with_time_stamp_s: Dict[float, int]):
-        """Orquestra a leitura, atualização e salvamento dos dados no Excel."""
-        if not history_whites_pixels_with_time_stamp_s:
+    def write_num_pixels_data(self, history_whites_pixels_sequential: Dict[int, int]):
+        """Orquestra a leitura, atualização e salvamento dos dados por frame na planilha Excel.
+        
+        Args:
+            history_whites_pixels_sequential: Dicionário com dados indexados sequencialmente (1, 2, 3...)
+                                              onde as chaves representam a ordem de coleta (frame1, frame2, frame3...)
+        """
+        if not history_whites_pixels_sequential:
             print("⚠️ Dados vazios. Nada será salvo.")
             return
 
@@ -35,10 +40,10 @@ class PixelsDataExcelWriter:
         try:
             self._check_file_lock(file_path)
             nome_atual = str(self.person_name)
-            formatted_data, new_ts_cols = self._format_timestamp_data(history_whites_pixels_with_time_stamp_s)
+            formatted_data, new_frame_cols = self._format_frame_data(history_whites_pixels_sequential)
             
             df = self._load_and_clean_dataframe(file_path)
-            df = self._merge_and_update_dataframe(df, nome_atual, formatted_data, new_ts_cols)
+            df = self._merge_and_update_dataframe(df, nome_atual, formatted_data, new_frame_cols)
             
             self._save_dataframe(df, file_path)
             print(f"✅ Processo finalizado para: {nome_atual}")
@@ -48,10 +53,6 @@ class PixelsDataExcelWriter:
         except Exception as e:
             print(f"❌ ERRO CRÍTICO AO SALVAR EXCEL:")
             traceback.print_exc()
-
-    # ──────────────────────────────────────────────────────────────
-    # 🔧 HELPERS (Responsabilidade Única)
-    # ──────────────────────────────────────────────────────────────
 
     def _check_file_lock(self, file_path: str) -> None:
         """Verifica se o arquivo está sendo usado por outro processo."""
@@ -64,9 +65,19 @@ class PixelsDataExcelWriter:
             except IOError as e:
                 raise IOError(f"Falha ao acessar arquivo: {e}")
 
-    def _format_timestamp_data(self, history_dict: Dict) -> tuple:
-        """Normaliza timestamps para string com 2 casas decimais."""
-        formatted = {f"{float(ts):.2f}": val for ts, val in history_dict.items()}
+    def _format_frame_data(self, history_dict: Dict) -> tuple:
+        """Formata os dados de pixels por número sequencial do frame (frame1, frame2, frame3...).
+        
+        As chaves do dicionário devem ser números sequenciais começando de 1 (1, 2, 3...)
+        representando a ordem em que os frames foram coletados.
+        
+        Args:
+            history_dict: Dicionário com chaves numéricas sequenciais (1, 2, 3...) e valores de pixels
+            
+        Returns:
+            tuple: (dict formatado com chaves 'frame1', 'frame2'..., lista das novas colunas)
+        """
+        formatted = {f"frame{int(frame)}": val for frame, val in history_dict.items()}
         return formatted, list(formatted.keys())
 
     def _load_and_clean_dataframe(self, file_path: str) -> Optional[pd.DataFrame]:
@@ -87,30 +98,30 @@ class PixelsDataExcelWriter:
     def _merge_and_update_dataframe(self, df: Optional[pd.DataFrame], 
                                     nome_atual: str, 
                                     formatted_data: Dict, 
-                                    new_ts_cols: list) -> pd.DataFrame:
-        """Alinha colunas, ordena timestamps e atualiza/cria a linha do voluntário."""
+                                    new_frame_cols: list) -> pd.DataFrame:
+        """Alinha colunas, ordena frames e atualiza/cria a linha do voluntário."""
         if df is None:
-            all_ts_cols = sorted(new_ts_cols, key=lambda x: float(x))
+            all_frame_cols = sorted(new_frame_cols, key=lambda x: int(x.replace('frame', '')))
             nova_linha = {'Nome Voluntário': nome_atual}
-            for col in all_ts_cols:
+            for col in all_frame_cols:
                 nova_linha[col] = formatted_data.get(col, None)
             return pd.DataFrame([nova_linha])
 
-        existing_ts_cols = [c for c in df.columns if c != 'Nome Voluntário']
-        all_ts_cols = sorted(list(set(existing_ts_cols + new_ts_cols)), key=lambda x: float(x))
+        existing_frame_cols = [c for c in df.columns if c != 'Nome Voluntário']
+        all_frame_cols = sorted(list(set(existing_frame_cols + new_frame_cols)), key=lambda x: int(x.replace('frame', '')))
         
         # 📐 Reindexa para adicionar colunas novas de forma vetorizada (evita fragmentação)
-        df = df.reindex(columns=['Nome Voluntário'] + all_ts_cols)
+        df = df.reindex(columns=['Nome Voluntário'] + all_frame_cols)
 
         mask = df['Nome Voluntário'].astype(str) == nome_atual
         if mask.any():
             idx = df[mask].index[0]
             # ✅ Atualização vetorizada
             df.loc[idx, list(formatted_data.keys())] = list(formatted_data.values())
-            print(f"✅ Atualizado: {nome_atual} ({len(formatted_data)} timestamps)")
+            print(f"✅ Atualizado: {nome_atual} ({len(formatted_data)} frames)")
         else:
             nova_linha = {'Nome Voluntário': nome_atual}
-            for col in all_ts_cols:
+            for col in all_frame_cols:
                 nova_linha[col] = formatted_data.get(col, None)
             # ✅ Evita FutureWarning: append seguro e compatível com pandas 2.0+
             df = pd.concat([df, pd.DataFrame([nova_linha])], ignore_index=True)
