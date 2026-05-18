@@ -22,9 +22,14 @@ class PixelsDataExcelWriter:
         return os.path.normpath(path_folder_num_pixels)
      
 
-    def write_num_pixels_data(self, history_whites_pixels_with_frame: Dict[int, int]):
-        """Orquestra a leitura, atualização e salvamento dos dados por frame na planilha Excel."""
-        if not history_whites_pixels_with_frame:
+    def write_num_pixels_data(self, history_whites_pixels_sequential: Dict[int, int]):
+        """Orquestra a leitura, atualização e salvamento dos dados por frame na planilha Excel.
+        
+        Args:
+            history_whites_pixels_sequential: Dicionário com dados indexados sequencialmente (1, 2, 3...)
+                                              onde as chaves representam a ordem de coleta (frame1, frame2, frame3...)
+        """
+        if not history_whites_pixels_sequential:
             print("⚠️ Dados vazios. Nada será salvo.")
             return
 
@@ -35,7 +40,7 @@ class PixelsDataExcelWriter:
         try:
             self._check_file_lock(file_path)
             nome_atual = str(self.person_name)
-            formatted_data, new_frame_cols = self._format_frame_data(history_whites_pixels_with_frame)
+            formatted_data, new_frame_cols = self._format_frame_data(history_whites_pixels_sequential)
             
             df = self._load_and_clean_dataframe(file_path)
             df = self._merge_and_update_dataframe(df, nome_atual, formatted_data, new_frame_cols)
@@ -49,10 +54,6 @@ class PixelsDataExcelWriter:
             print(f"❌ ERRO CRÍTICO AO SALVAR EXCEL:")
             traceback.print_exc()
 
-    # ──────────────────────────────────────────────────────────────
-    # 🔧 HELPERS (Responsabilidade Única)
-    # ──────────────────────────────────────────────────────────────
-
     def _check_file_lock(self, file_path: str) -> None:
         """Verifica se o arquivo está sendo usado por outro processo."""
         if os.path.exists(file_path):
@@ -65,7 +66,17 @@ class PixelsDataExcelWriter:
                 raise IOError(f"Falha ao acessar arquivo: {e}")
 
     def _format_frame_data(self, history_dict: Dict) -> tuple:
-        """Formata os dados de pixels por número do frame."""
+        """Formata os dados de pixels por número sequencial do frame (frame1, frame2, frame3...).
+        
+        As chaves do dicionário devem ser números sequenciais começando de 1 (1, 2, 3...)
+        representando a ordem em que os frames foram coletados.
+        
+        Args:
+            history_dict: Dicionário com chaves numéricas sequenciais (1, 2, 3...) e valores de pixels
+            
+        Returns:
+            tuple: (dict formatado com chaves 'frame1', 'frame2'..., lista das novas colunas)
+        """
         formatted = {f"frame{int(frame)}": val for frame, val in history_dict.items()}
         return formatted, list(formatted.keys())
 

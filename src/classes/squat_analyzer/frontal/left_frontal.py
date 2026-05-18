@@ -14,6 +14,7 @@ class LeftFrontal(BaseFrontal):
                  foot_pronation_error_threshold=5):
         self.history_whites_pixels = []
         self.history_whites_pixels_with_frame = {}
+        self.sequential_frame_counter = 0  # Contador sequencial para frames válidos (1, 2, 3...)
         super().__init__(options_marcadas=options_marcadas, person_name=person_name, side=side, descent_threshold=descent_threshold, 
                          ascent_return_threshold=ascent_return_threshold, hip_error_threshold=hip_error_threshold, knee_valgus_error_threshold=knee_valgus_error_threshold,
                          foot_pronation_error_threshold=foot_pronation_error_threshold)
@@ -67,7 +68,7 @@ class LeftFrontal(BaseFrontal):
                 self.heel_y_inicial = np.mean(self.heel_y_history[-10:])
                 self.big_toe_y_inicial = np.mean(self.big_toe_y_history[-10:])
                 self.initial_midpoint_y = (self.heel_y_inicial + self.big_toe_y_inicial) / 2
-                                
+                
             else:
                 self.ear_y_history.append(ear_y)
                 self.heel_y_history.append(heel_y) 
@@ -146,7 +147,6 @@ class LeftFrontal(BaseFrontal):
                 self.total_hip_error_counter += 1
                 self.consecutive_hip_error_counter = 0
 
-
                 
         except Exception as e:
             print(f"Erro ao calcular inclinação do quadril: {e}")
@@ -181,7 +181,6 @@ class LeftFrontal(BaseFrontal):
             if self.consecutive_knee_valgus_error_counter >= self.KNEE_VALGUS_ERROR_THRESHOLD:
                 self.total_knee_valgus_error_counter += 1
                 self.consecutive_knee_valgus_error_counter = 0
-
 
                 
         except Exception as e:
@@ -234,8 +233,11 @@ class LeftFrontal(BaseFrontal):
         # Verificar se o timestamp deve ser salvo
         if self._should_sample_data(timestamp_ms, interval_ms=500):
             
-            # Ações de gravação - agora salva por número do frame
-            self.history_whites_pixels_with_frame[frame_number] = num_withed_pixels
+            # Incrementa o contador sequencial para obter o próximo número de frame ordinal (1, 2, 3...)
+            self.sequential_frame_counter += 1
+            
+            # Ações de gravação - salva usando o contador sequencial como chave (frame1, frame2, frame3...)
+            self.history_whites_pixels_with_frame[self.sequential_frame_counter] = num_withed_pixels
             self.history_whites_pixels.append(num_withed_pixels)
 
             # Se não houver histórico suficiente para comparar, encerramos a análise deste frame
@@ -267,10 +269,3 @@ class LeftFrontal(BaseFrontal):
 
         # Retorna o status (se estiver fora do IF de 500ms, ele retorna o último valor calculado)
         return foot_pronation_status
-
-
-
-         
-       
-
-  
