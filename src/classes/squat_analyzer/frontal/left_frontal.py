@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import joblib
-import cv2 as cv
 
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
@@ -109,12 +108,6 @@ class LeftFrontal(BaseFrontal):
             'heel_x': dict_lm['left_heel_x'],
             'heel_y': dict_lm['left_heel_y']
         }
-    
-    def _get_center_point_foot(self, dict_lm):
-        mean_x = np.mean([dict_lm['left_ankle_x'], dict_lm['left_big_toe_x'], dict_lm['left_heel_x']]) 
-        mean_y = np.mean([dict_lm['left_ankle_y'], dict_lm['left_big_toe_y'], dict_lm['left_heel_y']]) 
-        return mean_x, mean_y
-
     def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
         hip_status = 0
         try:
@@ -182,29 +175,19 @@ class LeftFrontal(BaseFrontal):
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self, dict_lm, timestamp_ms, frame):
-        mean_x, mean_y = self._get_center_point_foot(dict_lm)
-        cut_frame = self.video_processor.crop_roi(frame, mean_x, mean_y)
-        num_withed_pixels = self.video_processor.count_white_pixels(cut_frame)
+    def _check_foot_pronation_error(self):
+        foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
+        static_data = foot_data_excel_writer.convert_data_to_statistic_pandas()
+        # Tirei o .values
+        X = static_data.iloc[:, 2:]
 
-        foot_proanation_status = 0
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_esquerdo.pkl")
+        model = joblib.load(model_path)
 
-        #if self.repetitions_detected == 2:
-        #    print(f"Repetição {(self.repetitions_detected+1)}: Erro de pronação de calcanhar no segundo {timestamp_ms/1000:.2f} com {num_withed_pixels} pixels brancos, com {self.consecutive_foot_pronation_error_counter} erros consecutivos")
-
-        if num_withed_pixels > 300:
-            self.consecutive_foot_pronation_error_counter += 1
-            foot_proanation_status = 1
-        else:
-            self.consecutive_foot_pronation_error_counter = 0
-
-        if (self.consecutive_foot_pronation_error_counter > 1):
-            print(f"Repetição {(self.repetitions_detected+1)}: Erro de pronação de calcanhar no segundo {timestamp_ms/1000:.2f} com {num_withed_pixels} pixels brancos, com {self.consecutive_foot_pronation_error_counter} erros consecutivos")
-
-            self.total_foot_pronation_error_counter += 1
-            self.consecutive_foot_pronation_error_counter = 0
-
-        return foot_proanation_status
-
-         
+        y_pred = model.predict(X)
+        foot_pronation_status = y_pred[0]
+        
+        return foot_pronation_status
+        
   
