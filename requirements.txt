@@ -1,8 +1,19 @@
-streamlit
-pandas
+# Django framework
+Django>=4.2
+
+# Processamento de vídeo e ML (mantidos do Streamlit)
 opencv-python
 mediapipe
 numpy
+pandas
+
+# Geração de relatórios Excel
 openpyxl
+
+# Modelos de Machine Learning
 scikit-learn
 joblib
+
+# Navegador para testes (opcional)
+webdriver-manager
+selenium

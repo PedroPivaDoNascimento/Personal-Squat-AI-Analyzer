@@ -1,0 +1,142 @@
+{% extends 'squat_analyzer/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" class="btn btn-secondary">← Voltar</a>
+
+<h1>{{ title }}</h1>
+
+{% if result %}
+    <!-- EXIBIÇÃO DE RESULTADOS -->
+    <div class="alert alert-success">
+        <h2>✅ Análise Concluída!</h2>
+        <p><strong>Nome:</strong> {{ person_name }}</p>
+        <p><strong>Repetições Detectadas:</strong> {{ result.repetitions_detected }}</p>
+    </div>
+
+    <h2>Resumo por Repetição</h2>
+    {% for detail in result.repetition_details %}
+    <div class="card">
+        <h3>Repetição {{ detail.repetition }} ({{ detail.timestamp|floatformat:2 }}s)</h3>
+        <table>
+            <tr><th>Métrica</th><th>Status</th><th>Contagem</th></tr>
+            <tr><td>Quadril</td><td class="{{ detail.hip_status|yesno:'error,ok' }}">{{ detail.hip_status }}</td><td>{{ detail.hip_count }}</td></tr>
+            <tr><td>Joelho</td><td class="{{ detail.knee_status|yesno:'error,ok' }}">{{ detail.knee_status }}</td><td>{{ detail.knee_count }}</td></tr>
+            <tr><td>Pé</td><td class="{{ detail.foot_status|yesno:'error,ok' }}">{{ detail.foot_status }}</td><td>{{ detail.foot_count }}</td></tr>
+        </table>
+        <div class="feedback">
+            <strong>Feedback:</strong>
+            <ul>
+                {% for msg in detail.feedback %}
+                <li>{{ msg }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Nenhuma repetição detectada com os parâmetros atuais.</div>
+    {% endfor %}
+
+    <h2>Dados Detalhados</h2>
+    {% if result.dataframes %}
+        {% for df_name, df_data in result.dataframes.items %}
+        <div class="card">
+            <h3>{{ df_name }}</h3>
+            {% if df_data %}
+            <table>
+                <thead>
+                    <tr>
+                        {% for key in df_data.0.keys %}
+                        <th>{{ key }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in df_data %}
+                    <tr>
+                        {% for value in row.values %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="alert alert-info">Nenhum dado registrado.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <a href="{% url 'frontal_analysis' side %}" class="btn">Nova Análise</a>
+
+{% else %}
+    <!-- FORMULÁRIO DE UPLOAD -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <label for="person_name">Nome da Pessoa:</label>
+        <input type="text" id="person_name" name="person_name" required>
+        
+        <label for="video">Enviar Vídeo ({{ analysis_type|upper }} - {{ side|capfirst }}):</label>
+        <input type="file" id="video" name="video" accept=".mp4,.avi,.mov" required>
+        
+        <h3>Repetições para Salvar</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" name="rep_1" value="1"> Repetição 1</label>
+            <label><input type="checkbox" name="rep_2" value="2"> Repetição 2</label>
+            <label><input type="checkbox" name="rep_3" value="3"> Repetição 3</label>
+        </div>
+        
+        <h3>Parâmetros de Avaliação</h3>
+        <div class="form-row">
+            <div class="form-col">
+                <label for="descent_threshold">Sensibilidade da Descida:</label>
+                <input type="range" id="descent_threshold" name="descent_threshold" 
+                       min="0.01" max="0.10" step="0.005" value="0.05">
+                <span id="descent_value">0.05</span>
+                <p class="help-text">Percentual de movimento da orelha para baixo.</p>
+                
+                <label for="hip_error_threshold">Tolerância Quadril:</label>
+                <input type="range" id="hip_error_threshold" name="hip_error_threshold" 
+                       min="1" max="150" step="1" value="1">
+                <span id="hip_value">1</span>
+                <p class="help-text">Instantes permitidos de desvio do quadril.</p>
+            </div>
+            
+            <div class="form-col">
+                <label for="ascent_return_threshold">Retorno na Subida:</label>
+                <input type="range" id="ascent_return_threshold" name="ascent_return_threshold" 
+                       min="0.005" max="0.05" step="0.005" value="0.02">
+                <span id="ascent_value">0.02</span>
+                <p class="help-text">Proximidade da posição inicial.</p>
+                
+                <label for="knee_valgus_error_threshold">Tolerância Joelho:</label>
+                <input type="range" id="knee_valgus_error_threshold" name="knee_valgus_error_threshold" 
+                       min="1" max="150" step="1" value="12">
+                <span id="knee_value">12</span>
+                <p class="help-text">Instantes permitidos de valgo/varo.</p>
+                
+                <label for="foot_pronation_error_threshold">Tolerância Pé:</label>
+                <input type="range" id="foot_pronation_error_threshold" name="foot_pronation_error_threshold" 
+                       min="1" max="150" step="1" value="7">
+                <span id="foot_value">7</span>
+                <p class="help-text">Instantes permitidos de pronação.</p>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn">Analisar Vídeo</button>
+    </form>
+
+    <script>
+        // Atualiza valores dos sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const span = document.getElementById(this.id.replace('_threshold', '_value'));
+                if (span) span.textContent = this.value;
+            });
+        });
+    </script>
+{% endif %}
+{% endblock %}

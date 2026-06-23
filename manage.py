@@ -3,10 +3,11 @@
 import os
 import sys
 
-
 def main():
     """Run administrative tasks."""
+    # O ponto crucial aqui: define o diretório do projeto como raiz
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'squat_analysis_app.settings')
+    
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -15,8 +16,10 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+    
+    # Esta linha garante que o diretório atual (onde está o manage.py) 
+    # esteja no sys.path, permitindo importar 'squat_analyzer'
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()
