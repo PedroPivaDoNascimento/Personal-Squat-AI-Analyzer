@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise {{ analysis_type }} - Agachamento</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .form-section h3 {
+            color: #555;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .help-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: scale(1.02);
+        }
+        
+        .checkbox-group {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-group label {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 20px;
+            font-weight: normal;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'index' %}" class="back-link">← Voltar para seleção</a>
+        
+        <h1>{{ analysis_type }} - Análise de Agachamento</h1>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Dados da Pessoa -->
+            <div class="form-section">
+                <h3>📋 Dados da Pessoa</h3>
+                
+                <div class="form-group">
+                    <label for="person_name">Nome da pessoa:</label>
+                    <input type="text" id="person_name" name="person_name" required>
+                </div>
+                
+                {% if requires_height %}
+                <div class="form-group">
+                    <label for="user_height_cm">Sua Altura (centímetros):</label>
+                    <input type="number" id="user_height_cm" name="user_height_cm" 
+                           min="100" max="250" value="170" required>
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="video_file">Envie o vídeo ({{ analysis_type }}):</label>
+                    <input type="file" id="video_file" name="video_file" 
+                           accept=".mp4,.avi,.mov" required>
+                </div>
+            </div>
+            
+            <!-- Checkboxes para Plano Frontal -->
+            {% if not requires_height %}
+            <div class="form-section">
+                <h3>💾 Selecionar Repetições para Salvar</h3>
+                <p style="margin-bottom: 15px; color: #666;">Marque as repetições que você quer salvar os dados no arquivo:</p>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" name="selected_repetitions" value="1">
+                        Salvar repetição 1
+                    </label>
+                    <label>
+                        <input type="checkbox" name="selected_repetitions" value="2">
+                        Salvar repetição 2
+                    </label>
+                    <label>
+                        <input type="checkbox" name="selected_repetitions" value="3">
+                        Salvar repetição 3
+                    </label>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Parâmetros de Avaliação -->
+            <div class="form-section">
+                <h3>⚙️ Parâmetros de Avaliação do Exercício</h3>
+                
+                <div class="form-row">
+                    <div>
+                        <div class="form-group">
+                            <label for="descent_threshold">
+                                Sensibilidade da Descida (Repetição)
+                            </label>
+                            <input type="range" id="descent_threshold" name="descent_threshold"
+                                   min="0.01" max="0.10" step="0.005" value="{{ params.descent_threshold }}">
+                            <div class="help-text">Valor: <span id="descent_value">{{ params.descent_threshold }}</span></div>
+                            <div class="help-text">Percentual de movimento da orelha para baixo para iniciar a contagem.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ascent_return_threshold">
+                                Tolerância de Retorno na Subida (Repetição)
+                            </label>
+                            <input type="range" id="ascent_return_threshold" name="ascent_return_threshold"
+                                   min="0.005" max="0.05" step="0.005" value="{{ params.ascent_return_threshold }}">
+                            <div class="help-text">Valor: <span id="ascent_value">{{ params.ascent_return_threshold }}</span></div>
+                            <div class="help-text">Percentual de proximidade da posição inicial para finalizar.</div>
+                        </div>
+                        
+                        {% if requires_height %}
+                        <!-- Parâmetros Sagitais -->
+                        <div class="form-group">
+                            <label for="trunk_error_threshold">
+                                Tolerância de Desvio - Tronco (Duração Permitida)
+                            </label>
+                            <input type="range" id="trunk_error_threshold" name="trunk_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.trunk_error_threshold }}">
+                            <div class="help-text">Valor: <span id="trunk_value">{{ params.trunk_error_threshold }}</span> instantes</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="knee_error_threshold">
+                                Tolerância de Desvio - Joelho (Duração Permitida)
+                            </label>
+                            <input type="range" id="knee_error_threshold" name="knee_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.knee_error_threshold }}">
+                            <div class="help-text">Valor: <span id="knee_value">{{ params.knee_error_threshold }}</span> instantes</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="head_error_threshold">
+                                Tolerância de Desvio - Cabeça (Duração Permitida)
+                            </label>
+                            <input type="range" id="head_error_threshold" name="head_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.head_error_threshold }}">
+                            <div class="help-text">Valor: <span id="head_value">{{ params.head_error_threshold }}</span> instantes</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="foot_error_threshold">
+                                Tolerância de Desvio - Calcanhar (Duração Permitida)
+                            </label>
+                            <input type="range" id="foot_error_threshold" name="foot_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.foot_error_threshold }}">
+                            <div class="help-text">Valor: <span id="foot_value">{{ params.foot_error_threshold }}</span> instantes</div>
+                        </div>
+                        {% else %}
+                        <!-- Parâmetros Frontais -->
+                        <div class="form-group">
+                            <label for="hip_error_threshold">
+                                Tolerância de Desvio - Quadril (Duração Permitida)
+                            </label>
+                            <input type="range" id="hip_error_threshold" name="hip_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.hip_error_threshold }}">
+                            <div class="help-text">Valor: <span id="hip_value">{{ params.hip_error_threshold }}</span> instantes</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="knee_valgus_error_threshold">
+                                Tolerância de Desvio - Joelho (Valgo/Varo)
+                            </label>
+                            <input type="range" id="knee_valgus_error_threshold" name="knee_valgus_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.knee_valgus_error_threshold }}">
+                            <div class="help-text">Valor: <span id="knee_valgus_value">{{ params.knee_valgus_error_threshold }}</span> instantes</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="foot_pronation_error_threshold">
+                                Tolerância de Desvio - Pé (Pronação)
+                            </label>
+                            <input type="range" id="foot_pronation_error_threshold" name="foot_pronation_error_threshold"
+                                   min="1" max="150" step="1" value="{{ params.foot_pronation_error_threshold }}">
+                            <div class="help-text">Valor: <span id="foot_pronation_value">{{ params.foot_pronation_error_threshold }}</span> instantes</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn">🚀 Iniciar Análise</button>
+        </form>
+    </div>
+    
+    <script>
+        // Atualizar valores dos sliders em tempo real
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const span = document.getElementById(this.id.replace('_threshold', '_value'));
+                if (span) {
+                    span.textContent = this.value;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

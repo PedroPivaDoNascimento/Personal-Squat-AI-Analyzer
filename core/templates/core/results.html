@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado da Análise</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        h1, h2, h3, h4 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .divider {
+            border: none;
+            border-top: 2px solid #eee;
+            margin: 20px 0;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .repetition-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .status-ok {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .feedback-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .chart-container {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 200px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 10px;
+        }
+        
+        .bar {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .bar-fill {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 5px 5px 0 0;
+            min-width: 50px;
+            transition: height 0.3s ease;
+        }
+        
+        .bar-label {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #666;
+            text-align: center;
+        }
+        
+        .bar-value {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'index' %}" class="back-link">← Nova Análise</a>
+        
+        <h1>📊 Resultados da Análise para: {{ result.person_name }}</h1>
+        
+        <hr class="divider">
+        
+        <!-- Resumo Geral -->
+        <div class="summary-card">
+            <h2>✅ Resumo das Repetições Detectadas: {{ result.repetitions_detected }}</h2>
+        </div>
+        
+        {% if result.repetitions_detected > 0 %}
+        
+        <!-- Gráficos de Barras por Repetição -->
+        <h2>📈 Análise Detalhada de Desvios por Repetição</h2>
+        <p style="margin: 15px 0; color: #666;">
+            Abaixo, você encontrará um gráfico de barras para cada uma das repetições analisadas.
+            Cada gráfico mostra a quantidade de desvios para diferentes partes do corpo.
+        </p>
+        
+        {% for i in result.repetition_timestamps %}
+        {% if result.error_history.trunk|default:result.error_history.hip %}
+        <div class="chart-container">
+            <h3>Repetição {{ forloop.counter }}</h3>
+            
+            {% with rep_idx=forloop.counter0 %}
+            {% if analysis_type == 'sagittal_right' or analysis_type == 'sagittal_left' %}
+                <!-- Gráfico Sagital -->
+                <div class="bar-chart">
+                    {% with trunk_count=result.error_history.trunk|index:rep_idx knee_count=result.error_history.knee|index:rep_idx head_count=result.error_history.head|index:rep_idx heel_count=result.error_history.heel|index:rep_idx %}
+                    <div class="bar">
+                        <span class="bar-value">{{ trunk_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ trunk_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Tronco</span>
+                    </div>
+                    <div class="bar">
+                        <span class="bar-value">{{ knee_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ knee_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Joelho</span>
+                    </div>
+                    <div class="bar">
+                        <span class="bar-value">{{ head_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ head_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Cabeça</span>
+                    </div>
+                    <div class="bar">
+                        <span class="bar-value">{{ heel_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ heel_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Calcanhar</span>
+                    </div>
+                    {% endwith %}
+                </div>
+            {% else %}
+                <!-- Gráfico Frontal -->
+                <div class="bar-chart">
+                    {% with hip_count=result.error_history.hip|index:rep_idx knee_count=result.error_history.knee_valgus|index:rep_idx foot_count=result.error_history.foot_pronation|index:rep_idx %}
+                    <div class="bar">
+                        <span class="bar-value">{{ hip_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ hip_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Quadril</span>
+                    </div>
+                    <div class="bar">
+                        <span class="bar-value">{{ knee_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ knee_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Joelho</span>
+                    </div>
+                    <div class="bar">
+                        <span class="bar-value">{{ foot_count|default:"0" }}</span>
+                        <div class="bar-fill" style="height: {{ foot_count|default:0|add:10 }}px;"></div>
+                        <span class="bar-label">Pé</span>
+                    </div>
+                    {% endwith %}
+                </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        <hr class="divider">
+        
+        <!-- Detalhes por Repetição -->
+        <h2>📝 Detalhes por Repetição</h2>
+        
+        {% for i in result.repetition_timestamps %}
+        {% if result.reps_status.trunk|default:result.reps_status.hip %}
+        <div class="repetition-card">
+            <h4>Repetição {{ forloop.counter }} (Finalizada em {{ i|floatformat:2 }} segundos)</h4>
+            
+            {% with rep_idx=forloop.counter0 %}
+            {% if analysis_type == 'sagittal_right' or analysis_type == 'sagittal_left' %}
+                {% with trunk_status=result.reps_status.trunk|index:rep_idx knee_status=result.reps_status.knee|index:rep_idx head_status=result.reps_status.head|index:rep_idx heel_status=result.reps_status.heel|index:rep_idx trunk_count=result.error_history.trunk|index:rep_idx knee_count=result.error_history.knee|index:rep_idx head_count=result.error_history.head|index:rep_idx heel_count=result.error_history.heel|index:rep_idx %}
+                <p>- <strong>Tronco:</strong> {% if trunk_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ trunk_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                <p>- <strong>Joelho:</strong> {% if knee_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ knee_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                <p>- <strong>Cabeça:</strong> {% if head_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ head_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                <p>- <strong>Calcanhar:</strong> {% if heel_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ heel_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                
+                <div style="margin-top: 15px;">
+                    <strong>Feedback para esta repetição:</strong>
+                    {% if trunk_status == 1 %}
+                    <div class="feedback-box">💡 {{ result.feedback_messages.trunk_error }}</div>
+                    {% endif %}
+                    {% if knee_status == 1 %}
+                    <div class="feedback-box">💡 {{ result.feedback_messages.knee_error }}</div>
+                    {% endif %}
+                    {% if head_status == 1 %}
+                    <div class="feedback-box">💡 {{ result.feedback_messages.head_error }}</div>
+                    {% endif %}
+                    {% if heel_status == 1 %}
+                    <div class="feedback-box">💡 {{ result.feedback_messages.heel_error }}</div>
+                    {% endif %}
+                    {% if trunk_status == 0 and knee_status == 0 and head_status == 0 and heel_status == 0 %}
+                    <div class="success-box">✅ <strong>Ótima execução!</strong> Continue assim.</div>
+                    {% endif %}
+                </div>
+                {% endwith %}
+            {% else %}
+                {% with hip_status=result.reps_status.hip|index:rep_idx knee_status=result.reps_status.knee_valgus|index:rep_idx foot_status=result.reps_status.foot_pronation|index:rep_idx hip_count=result.error_history.hip|index:rep_idx knee_count=result.error_history.knee_valgus|index:rep_idx foot_count=result.error_history.foot_pronation|index:rep_idx %}
+                <p>- <strong>Inclinação do Quadril:</strong> {% if hip_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ hip_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                <p>- <strong>Valgo/Varo de Joelho:</strong> {% if knee_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ knee_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                <p>- <strong>Pronação do Pé:</strong> {% if foot_status == 1 %}<span class="status-error">DESVIO ❌</span> ({{ foot_count }} instantes){% else %}<span class="status-ok">OK ✅</span>{% endif %}</p>
+                
+                <div style="margin-top: 15px;">
+                    <strong>Feedback para esta repetição:</strong>
+                    {% if hip_status == 1 %}
+                    <div class="feedback-box">💡 Desvio no Quadril: Verifique a estabilidade lateral do quadril.</div>
+                    {% endif %}
+                    {% if knee_status == 1 %}
+                    <div class="feedback-box">💡 Desvio no Joelho: Valgo ou Varo detectado. Fortaleça abdutores.</div>
+                    {% endif %}
+                    {% if foot_status == 1 %}
+                    <div class="feedback-box">💡 Desvio no Pé: Pronação excessiva. Fortaleça a musculatura intrínseca do pé.</div>
+                    {% endif %}
+                    {% if hip_status == 0 and knee_status == 0 and foot_status == 0 %}
+                    <div class="success-box">✅ <strong>Ótima execução!</strong> Continue assim.</div>
+                    {% endif %}
+                </div>
+                {% endwith %}
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        
+        <hr class="divider">
+        
+        <!-- Tabelas de Dados -->
+        <h2>📋 Detalhe da Análise Ponto a Ponto (Momentos de Desvio)</h2>
+        
+        {% for title, df in result.dataframes.items %}
+        <div style="margin: 20px 0;">
+            <h3>{{ title }}</h3>
+            {% if df and not df.empty %}
+            <div style="overflow-x: auto;">
+                {{ df|safe }}
+            </div>
+            {% else %}
+            <p style="color: #666; font-style: italic;">Nenhum desvio registrado para {{ title|lower }}.</p>
+            {% endif %}
+        </div>
+        <hr class="divider">
+        {% endfor %}
+        
+        {% else %}
+        
+        <!-- Nenhuma repetição detectada -->
+        <div class="summary-card" style="background: #fff3cd; border-left: 5px solid #ffc107;">
+            <h3>⚠️ Nenhuma repetição foi detectada</h3>
+            <p style="margin-top: 10px; color: #666;">
+                Nenhuma repetição foi detectada com os parâmetros atuais. Por favor, verifique se o movimento 
+                de agachamento foi completo ou ajuste os parâmetros de sensibilidade.
+            </p>
+        </div>
+        
+        {% endif %}
+    </div>
+</body>
+</html>
