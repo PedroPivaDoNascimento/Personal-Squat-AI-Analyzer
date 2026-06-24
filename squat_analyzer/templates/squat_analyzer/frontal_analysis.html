@@ -70,6 +70,10 @@
     {% endif %}
 
     <a href="{% url 'frontal_analysis' side %}" class="btn">Nova Análise</a>
+    
+    {% if person_name %}
+    <a href="{% url 'download_excel' 'frontal' side %}?person_name={{ person_name }}" class="btn btn-success">📥 Baixar Relatório Excel</a>
+    {% endif %}
 
 {% else %}
     <!-- FORMULÁRIO DE UPLOAD -->

@@ -71,6 +71,10 @@
     {% endif %}
 
     <a href="{% url 'sagittal_analysis' side %}" class="btn">Nova Análise</a>
+    
+    {% if person_name %}
+    <a href="{% url 'download_excel' 'sagittal' side %}?person_name={{ person_name }}" class="btn btn-success">📥 Baixar Relatório Excel</a>
+    {% endif %}
 
 {% else %}
     <!-- FORMULÁRIO DE UPLOAD -->
