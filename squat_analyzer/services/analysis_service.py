@@ -308,3 +308,36 @@ class SquatAnalysisService:
         if not feedback_list:
             return ["✅ **Ótima execução!** Continue assim."]
         return feedback_list
+    
+    @staticmethod
+    def get_excel_file_path(person_name, analysis_type, side):
+        """
+        Retorna o caminho do arquivo Excel gerado para uma análise específica.
+        
+        Args:
+            person_name: Nome da pessoa
+            analysis_type: 'frontal' ou 'sagittal'
+            side: 'direito' ou 'esquerdo'
+        
+        Returns:
+            Caminho completo do arquivo Excel
+        """
+        # Mapeia o tipo de análise para o nome da pasta
+        plane_folder = 'frontal' if analysis_type == 'frontal' else 'sagital'
+        side_lower = side.lower()
+        
+        # Constrói o caminho base
+        output_folder = 'planilhas'
+        plane_output_folder = os.path.join(output_folder, plane_folder)
+        
+        # Para análise frontal, há uma subpasta adicional 'dados_pe'
+        if analysis_type == 'frontal':
+            final_output_folder = os.path.join(plane_output_folder, side_lower, 'dados_pe')
+        else:
+            final_output_folder = os.path.join(plane_output_folder, side_lower)
+        
+        # Nome do arquivo segue o padrão: {person_name}_Relatorio_{plane}_{side}.xlsx
+        file_name = f"{person_name}_Relatorio_{plane_folder}_{side_lower}.xlsx"
+        file_path = os.path.join(final_output_folder, file_name)
+        
+        return file_path

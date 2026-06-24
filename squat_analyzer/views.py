@@ -2,8 +2,10 @@
 Views para análise de agachamento - Camada de Controller
 Responsável por receber requisições HTTP e orquestrar o fluxo.
 """
+import os
 from django.shortcuts import render, redirect
 from django.core.files.uploadedfile import UploadedFile
+from django.http import FileResponse, Http404
 from .services.analysis_service import SquatAnalysisService
 
 
@@ -95,3 +97,48 @@ def sagittal_analysis(request, side):
             context['person_name'] = person_name
     
     return render(request, 'squat_analyzer/sagittal_analysis.html', context)
+
+
+def download_excel(request, analysis_type, side):
+    """
+    View para download do arquivo Excel gerado pela análise.
+    
+    Args:
+        request: Requisição HTTP
+        analysis_type: 'frontal' ou 'sagittal'
+        side: 'direito' ou 'esquerdo'
+    
+    Returns:
+        FileResponse com o arquivo Excel ou Http404 se não encontrado
+    """
+    if analysis_type not in ['frontal', 'sagittal']:
+        raise Http404("Tipo de análise inválido.")
+    
+    if side not in ['direito', 'esquerdo']:
+        raise Http404("Lado inválido.")
+    
+    # Obtém o nome da pessoa via parâmetro GET
+    person_name = request.GET.get('person_name')
+    
+    if not person_name:
+        raise Http404("Nome da pessoa não fornecido.")
+    
+    # Usa o serviço para obter o caminho do arquivo
+    file_path = SquatAnalysisService.get_excel_file_path(person_name, analysis_type, side)
+    
+    # Verifica se o arquivo existe
+    if not os.path.exists(file_path):
+        raise Http404(f"Arquivo de relatório não encontrado para {person_name} ({analysis_type} - {side}).")
+    
+    # Nome do arquivo para download
+    filename = f"Relatorio_{person_name}_{analysis_type}_{side}.xlsx"
+    
+    # Retorna o arquivo como resposta de download
+    response = FileResponse(
+        open(file_path, 'rb'),
+        as_attachment=True,
+        filename=filename,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    
+    return response
