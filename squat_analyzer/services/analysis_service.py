@@ -74,7 +74,7 @@ class SquatAnalysisService:
             # Gera relatório Excel
             excel_writer = FrontalReportExcelWriter(
                 person_name=person_name,
-                analyzer=self.ai_instance.squat_analyzer,
+                squat_analyzer_instance=self.ai_instance.squat_analyzer,
                 side=side
             )
             excel_writer.generate_report()
@@ -133,7 +133,7 @@ class SquatAnalysisService:
             # Gera relatório Excel
             excel_writer = SagittalReportExcelWriter(
                 person_name=person_name,
-                analyzer=self.ai_instance.squat_analyzer,
+                squat_analyzer_instance=self.ai_instance.squat_analyzer,
                 side=side
             )
             excel_writer.generate_report()
