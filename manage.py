@@ -2,12 +2,19 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+import pathlib  # <--- ADICIONAR
 
 def main():
     """Run administrative tasks."""
-    # O ponto crucial aqui: define o diretório do projeto como raiz
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'squat_analysis_app.settings')
+    # Configurar o diretório base do projeto
+    BASE_DIR = pathlib.Path(__file__).resolve().parent
     
+    # Adicionar a pasta 'src' ao PYTHONPATH para importar 'classes', 'gui', etc.
+    SRC_DIR = BASE_DIR / 'src'
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))  # <--- ADICIONAR
+
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'squat_analysis_app.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -16,10 +23,8 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    
-    # Esta linha garante que o diretório atual (onde está o manage.py) 
-    # esteja no sys.path, permitindo importar 'squat_analyzer'
     execute_from_command_line(sys.argv)
+
 
 if __name__ == '__main__':
     main()

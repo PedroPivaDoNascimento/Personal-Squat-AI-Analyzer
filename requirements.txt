@@ -3,7 +3,7 @@ Django>=4.2
 
 # Processamento de vídeo e ML (mantidos do Streamlit)
 opencv-python
-mediapipe
+mediapipe==0.10.14
 numpy
 pandas
 

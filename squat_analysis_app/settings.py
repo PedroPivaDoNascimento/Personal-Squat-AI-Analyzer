@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'squat_analysis_app.squat_analyzer',
+    'squat_analyzer',
 ]
 
 MIDDLEWARE = [
