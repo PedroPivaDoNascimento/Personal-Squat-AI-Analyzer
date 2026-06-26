@@ -332,7 +332,7 @@ class SquatAnalysisService:
         
         # Para análise frontal, há uma subpasta adicional 'dados_pe'
         if analysis_type == 'frontal':
-            final_output_folder = os.path.join(plane_output_folder, side_lower, 'dados_pe')
+            final_output_folder = os.path.join(plane_output_folder, side_lower)
         else:
             final_output_folder = os.path.join(plane_output_folder, side_lower)
         
