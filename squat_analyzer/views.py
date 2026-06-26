@@ -9,24 +9,58 @@ from django.http import FileResponse, Http404
 from .services.analysis_service import SquatAnalysisService
 
 
+# Thresholds padrão por tipo de análise e lado
+FRONTAL_LEFT_THRESHOLDS = {
+    'descent_th': 0.05,
+    'hip_err_th': 1,
+    'ascent_return_th': 0.02,
+    'knee_valgus_th': 5,
+    'foot_pronation_th': 7,
+}
+
+FRONTAL_RIGHT_THRESHOLDS = {
+    'descent_th': 0.05,
+    'hip_err_th': 1,
+    'ascent_return_th': 0.02,
+    'knee_valgus_th': 12,
+    'foot_pronation_th': 7,
+}
+
+SAGITTAL_LEFT_THRESHOLDS = {
+    'descent_th': 0.05,
+    'trunk_err_th': 23,
+    'head_err_th': 2,
+    'ascent_return_th': 0.02,
+    'knee_err_th': 6,
+    'foot_err_th': 8,
+}
+
+SAGITTAL_RIGHT_THRESHOLDS = {
+    'descent_th': 0.05,
+    'trunk_err_th': 23,
+    'head_err_th': 2,
+    'ascent_return_th': 0.02,
+    'knee_err_th': 6,
+    'foot_err_th': 8,
+}
+
+
 def index(request):
     """Página inicial com seleção do tipo de análise."""
     return render(request, 'squat_analyzer/index.html')
 
 
-def frontal_analysis(request, side):
+def frontal_left_analysis(request):
     """
-    View para análise frontal (direito ou esquerdo).
+    View para análise frontal - lado esquerdo.
     GET: Exibe formulário de upload
     POST: Processa vídeo e exibe resultados
     """
-    if side not in ['direito', 'esquerdo']:
-        return redirect('index')
-    
     context = {
-        'side': side,
+        'side': 'esquerdo',
         'analysis_type': 'frontal',
-        'title': f'Análise Frontal {side.capitalize()}'
+        'title': 'Análise Frontal Esquerdo',
+        'thresholds': FRONTAL_LEFT_THRESHOLDS,
     }
     
     if request.method == 'POST':
@@ -35,11 +69,11 @@ def frontal_analysis(request, side):
         
         # Parâmetros de análise
         params = {
-            'descent_threshold': float(request.POST.get('descent_threshold', 0.05)),
-            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', 0.02)),
-            'hip_error_threshold': int(request.POST.get('hip_error_threshold', 1)),
-            'knee_valgus_error_threshold': int(request.POST.get('knee_valgus_error_threshold', 12)),
-            'foot_pronation_error_threshold': int(request.POST.get('foot_pronation_error_threshold', 7))
+            'descent_threshold': float(request.POST.get('descent_threshold', FRONTAL_LEFT_THRESHOLDS['descent_th'])),
+            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', FRONTAL_LEFT_THRESHOLDS['ascent_return_th'])),
+            'hip_error_threshold': int(request.POST.get('hip_err_th', FRONTAL_LEFT_THRESHOLDS['hip_err_th'])),
+            'knee_valgus_error_threshold': int(request.POST.get('knee_valgus_th', FRONTAL_LEFT_THRESHOLDS['knee_valgus_th'])),
+            'foot_pronation_error_threshold': int(request.POST.get('foot_pronation_th', FRONTAL_LEFT_THRESHOLDS['foot_pronation_th']))
         }
         
         # Repetições selecionadas
@@ -53,26 +87,68 @@ def frontal_analysis(request, side):
         
         if video_file and person_name:
             service = SquatAnalysisService()
-            result = service.analyze_frontal(video_file, person_name, side, params, selected_reps)
+            result = service.analyze_frontal(video_file, person_name, 'esquerdo', params, selected_reps)
             context['result'] = result
             context['person_name'] = person_name
     
-    return render(request, 'squat_analyzer/frontal_analysis.html', context)
+    return render(request, 'squat_analyzer/frontal_left_analysis.html', context)
 
 
-def sagittal_analysis(request, side):
+def frontal_right_analysis(request):
     """
-    View para análise sagital (direito ou esquerdo).
+    View para análise frontal - lado direito.
     GET: Exibe formulário de upload
     POST: Processa vídeo e exibe resultados
     """
-    if side not in ['direito', 'esquerdo']:
-        return redirect('index')
-    
     context = {
-        'side': side,
+        'side': 'direito',
+        'analysis_type': 'frontal',
+        'title': 'Análise Frontal Direito',
+        'thresholds': FRONTAL_RIGHT_THRESHOLDS,
+    }
+    
+    if request.method == 'POST':
+        video_file = request.FILES.get('video')
+        person_name = request.POST.get('person_name')
+        
+        # Parâmetros de análise
+        params = {
+            'descent_threshold': float(request.POST.get('descent_threshold', FRONTAL_RIGHT_THRESHOLDS['descent_th'])),
+            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', FRONTAL_RIGHT_THRESHOLDS['ascent_return_th'])),
+            'hip_error_threshold': int(request.POST.get('hip_err_th', FRONTAL_RIGHT_THRESHOLDS['hip_err_th'])),
+            'knee_valgus_error_threshold': int(request.POST.get('knee_valgus_th', FRONTAL_RIGHT_THRESHOLDS['knee_valgus_th'])),
+            'foot_pronation_error_threshold': int(request.POST.get('foot_pronation_th', FRONTAL_RIGHT_THRESHOLDS['foot_pronation_th']))
+        }
+        
+        # Repetições selecionadas
+        selected_reps = []
+        if request.POST.get('rep_1'):
+            selected_reps.append(1)
+        if request.POST.get('rep_2'):
+            selected_reps.append(2)
+        if request.POST.get('rep_3'):
+            selected_reps.append(3)
+        
+        if video_file and person_name:
+            service = SquatAnalysisService()
+            result = service.analyze_frontal(video_file, person_name, 'direito', params, selected_reps)
+            context['result'] = result
+            context['person_name'] = person_name
+    
+    return render(request, 'squat_analyzer/frontal_right_analysis.html', context)
+
+
+def sagittal_left_analysis(request):
+    """
+    View para análise sagital - lado esquerdo.
+    GET: Exibe formulário de upload
+    POST: Processa vídeo e exibe resultados
+    """
+    context = {
+        'side': 'esquerdo',
         'analysis_type': 'sagittal',
-        'title': f'Análise Sagital {side.capitalize()}'
+        'title': 'Análise Sagital Esquerdo',
+        'thresholds': SAGITTAL_LEFT_THRESHOLDS,
     }
     
     if request.method == 'POST':
@@ -82,21 +158,58 @@ def sagittal_analysis(request, side):
         
         # Parâmetros de análise
         params = {
-            'descent_threshold': float(request.POST.get('descent_threshold', 0.05)),
-            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', 0.02)),
-            'trunk_error_threshold': int(request.POST.get('trunk_error_threshold', 23)),
-            'knee_error_threshold': int(request.POST.get('knee_error_threshold', 6)),
-            'head_error_threshold': int(request.POST.get('head_error_threshold', 2)),
-            'foot_error_threshold': int(request.POST.get('foot_error_threshold', 8))
+            'descent_threshold': float(request.POST.get('descent_threshold', SAGITTAL_LEFT_THRESHOLDS['descent_th'])),
+            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', SAGITTAL_LEFT_THRESHOLDS['ascent_return_th'])),
+            'trunk_error_threshold': int(request.POST.get('trunk_err_th', SAGITTAL_LEFT_THRESHOLDS['trunk_err_th'])),
+            'knee_error_threshold': int(request.POST.get('knee_err_th', SAGITTAL_LEFT_THRESHOLDS['knee_err_th'])),
+            'head_error_threshold': int(request.POST.get('head_err_th', SAGITTAL_LEFT_THRESHOLDS['head_err_th'])),
+            'foot_error_threshold': int(request.POST.get('foot_err_th', SAGITTAL_LEFT_THRESHOLDS['foot_err_th']))
         }
         
         if video_file and person_name:
             service = SquatAnalysisService()
-            result = service.analyze_sagittal(video_file, person_name, side, user_height_cm, params)
+            result = service.analyze_sagittal(video_file, person_name, 'esquerdo', user_height_cm, params)
             context['result'] = result
             context['person_name'] = person_name
     
-    return render(request, 'squat_analyzer/sagittal_analysis.html', context)
+    return render(request, 'squat_analyzer/sagittal_left_analysis.html', context)
+
+
+def sagittal_right_analysis(request):
+    """
+    View para análise sagital - lado direito.
+    GET: Exibe formulário de upload
+    POST: Processa vídeo e exibe resultados
+    """
+    context = {
+        'side': 'direito',
+        'analysis_type': 'sagittal',
+        'title': 'Análise Sagital Direito',
+        'thresholds': SAGITTAL_RIGHT_THRESHOLDS,
+    }
+    
+    if request.method == 'POST':
+        video_file = request.FILES.get('video')
+        person_name = request.POST.get('person_name')
+        user_height_cm = float(request.POST.get('user_height_cm', 170))
+        
+        # Parâmetros de análise
+        params = {
+            'descent_threshold': float(request.POST.get('descent_threshold', SAGITTAL_RIGHT_THRESHOLDS['descent_th'])),
+            'ascent_return_threshold': float(request.POST.get('ascent_return_threshold', SAGITTAL_RIGHT_THRESHOLDS['ascent_return_th'])),
+            'trunk_error_threshold': int(request.POST.get('trunk_err_th', SAGITTAL_RIGHT_THRESHOLDS['trunk_err_th'])),
+            'knee_error_threshold': int(request.POST.get('knee_err_th', SAGITTAL_RIGHT_THRESHOLDS['knee_err_th'])),
+            'head_error_threshold': int(request.POST.get('head_err_th', SAGITTAL_RIGHT_THRESHOLDS['head_err_th'])),
+            'foot_error_threshold': int(request.POST.get('foot_err_th', SAGITTAL_RIGHT_THRESHOLDS['foot_err_th']))
+        }
+        
+        if video_file and person_name:
+            service = SquatAnalysisService()
+            result = service.analyze_sagittal(video_file, person_name, 'direito', user_height_cm, params)
+            context['result'] = result
+            context['person_name'] = person_name
+    
+    return render(request, 'squat_analyzer/sagittal_right_analysis.html', context)
 
 
 def download_excel(request, analysis_type, side):
