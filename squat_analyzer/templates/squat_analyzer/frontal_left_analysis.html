@@ -1,0 +1,146 @@
+{% extends 'squat_analyzer/base.html' %}
+
+{% block title %}Análise Frontal - Lado Esquerdo{% endblock %}
+
+{% block content %}
+<a href="{% url 'index' %}" class="btn btn-secondary">← Voltar</a>
+
+<h1>Análise Frontal - Lado Esquerdo</h1>
+
+{% if result %}
+    <!-- EXIBIÇÃO DE RESULTADOS -->
+    <div class="alert alert-success">
+        <h2>✅ Análise Concluída!</h2>
+        <p><strong>Nome:</strong> {{ person_name }}</p>
+        <p><strong>Repetições Detectadas:</strong> {{ result.repetitions_detected }}</p>
+    </div>
+
+    <h2>Resumo por Repetição</h2>
+    {% for detail in result.repetition_details %}
+    <div class="card">
+        <h3>Repetição {{ detail.repetition }} ({{ detail.timestamp|floatformat:2 }}s)</h3>
+        <table>
+            <tr><th>Métrica</th><th>Status</th><th>Contagem</th></tr>
+            <tr><td>Quadril</td><td class="{{ detail.hip_status|yesno:'error,ok' }}">{{ detail.hip_status }}</td><td>{{ detail.hip_count }}</td></tr>
+            <tr><td>Joelho</td><td class="{{ detail.knee_status|yesno:'error,ok' }}">{{ detail.knee_status }}</td><td>{{ detail.knee_count }}</td></tr>
+            <tr><td>Pé</td><td class="{{ detail.foot_status|yesno:'error,ok' }}">{{ detail.foot_status }}</td><td>{{ detail.foot_count }}</td></tr>
+        </table>
+        <div class="feedback">
+            <strong>Feedback:</strong>
+            <ul>
+                {% for msg in detail.feedback %}
+                <li>{{ msg }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% empty %}
+    <div class="alert alert-info">Nenhuma repetição detectada com os parâmetros atuais.</div>
+    {% endfor %}
+
+    <h2>Dados Detalhados</h2>
+    {% if result.dataframes %}
+        {% for df_name, df_data in result.dataframes.items %}
+        <div class="card">
+            <h3>{{ df_name }}</h3>
+            {% if df_data %}
+            <table>
+                <thead>
+                    <tr>
+                        {% for key in df_data.0.keys %}
+                        <th>{{ key }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in df_data %}
+                    <tr>
+                        {% for value in row.values %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="alert alert-info">Nenhum dado registrado.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <a href="{% url 'frontal_left_analysis' %}" class="btn">Nova Análise</a>
+    
+    {% if person_name %}
+    <a href="{% url 'download_excel' 'frontal' 'esquerdo' %}?person_name={{ person_name }}" class="btn btn-success">📥 Baixar Relatório Excel</a>
+    {% endif %}
+
+{% else %}
+    <!-- FORMULÁRIO DE UPLOAD -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <label for="person_name">Nome da Pessoa:</label>
+        <input type="text" id="person_name" name="person_name" required>
+        
+        <label for="video">Enviar Vídeo (FRONTAL - Esquerdo):</label>
+        <input type="file" id="video" name="video" accept=".mp4,.avi,.mov" required>
+        
+        <h3>Repetições para Salvar</h3>
+        <div class="checkbox-group">
+            <label><input type="checkbox" name="rep_1" value="1"> Repetição 1</label>
+            <label><input type="checkbox" name="rep_2" value="2"> Repetição 2</label>
+            <label><input type="checkbox" name="rep_3" value="3"> Repetição 3</label>
+        </div>
+        
+        <h3>Parâmetros de Avaliação</h3>
+        <div class="form-row">
+            <div class="form-col">
+                <label for="descent_threshold">Sensibilidade da Descida:</label>
+                <input type="range" id="descent_threshold" name="descent_threshold" 
+                       min="0.01" max="0.10" step="0.005" value="{{ thresholds.descent_th }}">
+                <span id="descent_value">{{ thresholds.descent_th }}</span>
+                <p class="help-text">Percentual de movimento da orelha para baixo.</p>
+                
+                <label for="hip_err_th">Tolerância Quadril:</label>
+                <input type="range" id="hip_err_th" name="hip_err_th" 
+                       min="1" max="150" step="1" value="{{ thresholds.hip_err_th }}">
+                <span id="hip_value">{{ thresholds.hip_err_th }}</span>
+                <p class="help-text">Instantes permitidos de desvio do quadril.</p>
+            </div>
+            
+            <div class="form-col">
+                <label for="ascent_return_th">Retorno na Subida:</label>
+                <input type="range" id="ascent_return_th" name="ascent_return_th" 
+                       min="0.005" max="0.05" step="0.005" value="{{ thresholds.ascent_return_th }}">
+                <span id="ascent_value">{{ thresholds.ascent_return_th }}</span>
+                <p class="help-text">Proximidade da posição inicial.</p>
+                
+                <label for="knee_valgus_th">Tolerância Joelho (Valgo):</label>
+                <input type="range" id="knee_valgus_th" name="knee_valgus_th" 
+                       min="1" max="150" step="1" value="{{ thresholds.knee_valgus_th }}">
+                <span id="knee_value">{{ thresholds.knee_valgus_th }}</span>
+                <p class="help-text">Instantes permitidos de valgo/varo.</p>
+                
+                <label for="foot_pronation_th">Tolerância Pé (Pronação):</label>
+                <input type="range" id="foot_pronation_th" name="foot_pronation_th" 
+                       min="1" max="150" step="1" value="{{ thresholds.foot_pronation_th }}">
+                <span id="foot_value">{{ thresholds.foot_pronation_th }}</span>
+                <p class="help-text">Instantes permitidos de pronação.</p>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn">Analisar Vídeo</button>
+    </form>
+
+    <script>
+        // Atualiza valores dos sliders
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const span = document.getElementById(this.id.replace('_th', '_value'));
+                if (span) span.textContent = this.value;
+            });
+        });
+    </script>
+{% endif %}
+{% endblock %}
