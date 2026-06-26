@@ -7,18 +7,16 @@
 <p style="margin-bottom: 30px;">Por favor, selecione o tipo de agachamento que você deseja analisar:</p>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-    <div class="card">
+     <div class="card">
         <h3>Agachamento Frontal</h3>
-        <p style="margin: 15px 0;">Análise do movimento frontal para detectar desvios laterais.</p>
-        <a href="{% url 'frontal_analysis' 'direito' %}" class="btn">Frontal Direito</a>
-        <a href="{% url 'frontal_analysis' 'esquerdo' %}" class="btn">Frontal Esquerdo</a>
+        <a href="{% url 'frontal_right_analysis' %}" class="btn">Frontal Direito</a>
+        <a href="{% url 'frontal_left_analysis' %}" class="btn">Frontal Esquerdo</a>
     </div>
-    
+
     <div class="card">
         <h3>Agachamento Sagital</h3>
-        <p style="margin: 15px 0;">Análise do movimento sagital para detectar desvios de perfil.</p>
-        <a href="{% url 'sagittal_analysis' 'direito' %}" class="btn">Sagital Direito</a>
-        <a href="{% url 'sagittal_analysis' 'esquerdo' %}" class="btn">Sagital Esquerdo</a>
+        <a href="{% url 'sagittal_right_analysis' %}" class="btn">Sagital Direito</a>
+        <a href="{% url 'sagittal_left_analysis' %}" class="btn">Sagital Esquerdo</a>
     </div>
 </div>
 {% endblock %}
