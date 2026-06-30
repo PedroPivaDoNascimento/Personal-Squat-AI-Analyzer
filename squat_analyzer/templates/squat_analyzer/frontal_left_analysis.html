@@ -1,0 +1,209 @@
+{% extends 'squat_analyzer/base.html' %}
+
+{% block title %}Análise Frontal - Lado Esquerdo{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 24px;">
+    <a href="{% url 'index' %}" class="btn btn-secondary">← Voltar para a Home</a>
+</div>
+
+<h1>Análise Frontal - Lado Esquerdo</h1>
+
+{% if result %}
+    <div class="alert alert-success">
+        <h2>✅ Análise Concluída com Sucesso!</h2>
+        <div style="margin-top: 8px; font-size: 14px; font-weight: normal; color: var(--success-text);">
+            <p style="color: inherit; margin-bottom: 2px;"><strong>Atleta:</strong> {{ person_name }}</p>
+            <p style="color: inherit;"><strong>Repetições Detectadas:</strong> {{ result.repetitions_detected }}</p>
+        </div>
+    </div>
+
+    <h2>Resumo por Repetição</h2>
+    {% for detail in result.repetition_details %}
+    <div class="card">
+        <h3 style="color: var(--primary); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 16px;">
+            Repetição {{ detail.repetition }} <span style="font-weight: normal; color: var(--text-muted); font-size: 13px;">({{ detail.timestamp|floatformat:2 }}s)</span>
+        </h3>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Métrica Analisada</th>
+                        <th>Status</th>
+                        <th>Contagem de Desvios (Frames)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Quadril (Alinhamento)</td>
+                        <td><span class="status-badge {% if 'ok' in detail.hip_status|lower %}ok{% else %}error{% endif %}">{{ detail.hip_status }}</span></td>
+                        <td><strong>{{ detail.hip_count }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Joelho (Valgo/Varo)</td>
+                        <td><span class="status-badge {% if 'ok' in detail.knee_status|lower %}ok{% else %}error{% endif %}">{{ detail.knee_status }}</span></td>
+                        <td><strong>{{ detail.knee_count }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Pé (Pronação)</td>
+                        <td><span class="status-badge {% if 'ok' in detail.foot_status|lower %}ok{% else %}error{% endif %}">{{ detail.foot_status }}</span></td>
+                        <td><strong>{{ detail.foot_count }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        {% if detail.feedback %}
+        <div class="feedback">
+            <strong>📋 Feedback Corretivo:</strong>
+            <ul>
+                {% for msg in detail.feedback %}
+                <li>{{ msg }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="alert alert-info">
+        <h2>Nenhuma repetição detectada</h2>
+        <p style="color: inherit; font-size: 14px; font-weight: normal;">Tente ajustar as sensibilidades e limites nos parâmetros abaixo e reenvie o vídeo.</p>
+    </div>
+    {% endfor %}
+
+    <h2>Dados Detalhados das Séries</h2>
+    {% if result.dataframes %}
+        {% for df_name, df_data in result.dataframes.items %}
+        <div class="card">
+            <h3 style="font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 12px;">{{ df_name }}</h3>
+            {% if df_data %}
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            {% for key in df_data.0.keys %}
+                            <th>{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in df_data %}
+                        <tr>
+                            {% for value in row.values %}
+                            <td>{{ value }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="alert alert-info" style="margin: 0; font-size: 14px; font-weight: normal;">Nenhum dado registrado nesta matriz.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="margin-top: 32px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="{% url 'frontal_left_analysis' %}" class="btn">Realizar Nova Análise</a>
+        {% if person_name %}
+        <a href="{% url 'download_excel' 'frontal' 'esquerdo' %}?person_name={{ person_name }}" class="btn btn-success">📥 Baixar Relatório Completo (.xlsx)</a>
+        {% endif %}
+    </div>
+
+{% else %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="card" style="margin-top: 0;">
+            <h3 style="margin-bottom: 16px;">Dados do Atleta e Mídia</h3>
+            <div class="form-group">
+                <label for="person_name">Nome Completo do Avaliado:</label>
+                <input type="text" id="person_name" name="person_name" placeholder="Ex: Lucas Meirelles" required>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="video">Vídeo do Agachamento (Visão FRONTAL - Lado Esquerdo):</label>
+                <input type="file" id="video" name="video" accept=".mp4,.avi,.mov" required>
+                <p class="help-text">Formatos aceitos: .mp4, .avi, .mov. Certifique-se de que a iluminação esteja adequada.</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 4px;">Parâmetros e Thresholds de Avaliação Científica</h3>
+            <p class="help-text" style="margin-bottom: 20px;">Ajuste as tolerâncias cinemáticas de desvio angular e sensibilidades de transição:</p>
+            
+            <div class="form-row">
+                <div class="form-col">
+                    <div class="range-container">
+                        <div class="range-header">
+                            <label for="descent_threshold">Sensibilidade da Descida:</label>
+                            <span class="range-value">{{ thresholds.descent_th }}</span>
+                        </div>
+                        <input type="range" id="descent_threshold" name="descent_threshold" 
+                               min="0.01" max="0.10" step="0.005" value="{{ thresholds.descent_th }}">
+                        <p class="help-text">Deslocamento vertical inicial da orelha necessário para ativar o ciclo.</p>
+                    </div>
+                    
+                    <div class="range-container">
+                        <div class="range-header">
+                            <label for="hip_err_th">Tolerância Quadril (Desnível):</label>
+                            <span class="range-value">{{ thresholds.hip_err_th }}</span>
+                        </div>
+                        <input type="range" id="hip_err_th" name="hip_err_th" 
+                               min="1" max="150" step="1" value="{{ thresholds.hip_err_th }}">
+                        <p class="help-text">Janela de frames permitidos de desalinhamento pélvico lateral.</p>
+                    </div>
+                </div>
+                
+                <div class="form-col">
+                    <div class="range-container">
+                        <div class="range-header">
+                            <label for="ascent_return_th">Retorno na Subida:</label>
+                            <span class="range-value">{{ thresholds.ascent_return_th }}</span>
+                        </div>
+                        <input type="range" id="ascent_return_th" name="ascent_return_th" 
+                               min="0.005" max="0.05" step="0.005" value="{{ thresholds.ascent_return_th }}">
+                        <p class="help-text">Proximidade milimétrica em relação ao ponto inicial para fechamento da repetição.</p>
+                    </div>
+                    
+                    <div class="range-container">
+                        <div class="range-header">
+                            <label for="knee_valgus_th">Tolerância Joelho (Valgo/Varo):</label>
+                            <span class="range-value">{{ thresholds.knee_valgus_th }}</span>
+                        </div>
+                        <input type="range" id="knee_valgus_th" name="knee_valgus_th" 
+                               min="1" max="150" step="1" value="{{ thresholds.knee_valgus_th }}">
+                        <p class="help-text">Quantidade de instantes tolerados com adução ou abdução excessiva de patela.</p>
+                    </div>
+                    
+                    <div class="range-container" style="margin-bottom: 0;">
+                        <div class="range-header">
+                            <label for="foot_pronation_th">Tolerância Pé (Pronação):</label>
+                            <span class="range-value">{{ thresholds.foot_pronation_th }}</span>
+                        </div>
+                        <input type="range" id="foot_pronation_th" name="foot_pronation_th" 
+                               min="1" max="150" step="1" value="{{ thresholds.foot_pronation_th }}">
+                        <p class="help-text">Instantes máximos permitidos de desabamento medial do arco plantar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <button type="submit" class="btn" style="padding: 12px 32px; font-size: 15px;">🚀 Processar e Analisar Vídeo</button>
+        </div>
+    </form>
+
+    <script>
+        document.querySelectorAll('.range-container input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const badge = this.closest('.range-container').querySelector('.range-value');
+                if (badge) {
+                    badge.textContent = this.value;
+                }
+            });
+        });
+    </script>
+{% endif %}
+{% endblock %}
