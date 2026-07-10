@@ -11,25 +11,32 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Iniciando o environ
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+
+# Lendo o arquivo .env
+environ.Env.read_env(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9db-gkromg(oursnn51+t69cyzsj^v(@gw9lnt(k8w&@7n@2uk'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# Pegando a secret_key do .env
+SECRET_KEY = env('SECRET_KEY')
+# Pegando o DEBUG do .env
+DEBUG = env('DEBUG')
+# Pegando os ALLOWED_HOSTS do .env
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -77,7 +84,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    }   
 }
 
 
@@ -128,3 +135,29 @@ STATICFILES_DIRS = [BASE_DIR / 'squat_analysis_app' / 'squat_analyzer' / 'static
 # Tempo máximo para upload de vídeos grandes
 FILE_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
+
+# Ajustes quando estiver em produção com HTTPS
+# Redireciona todas as requisições HTTP para HTTPS
+SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
+
+# Cookies seguros apenas via HTTPS
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
+
+# HSTS (HTTP Strict Transport Security)
+# Define por quanto tempo o navegador deve lembrar que o site só pode ser acessado via HTTPS
+SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)  # 1 ano
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
+SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
+
+# Protege contra clickjacking
+X_FRAME_OPTIONS = 'DENY'
+
+# Protege contra MIME type sniffing
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Filtra conteúdo XSS em navegadores mais antigos
+SECURE_BROWSER_XSS_FILTER = True
+
+# Referrer Policy
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
