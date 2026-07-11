@@ -1,5 +1,6 @@
 # Django framework
 Django>=4.2
+django-environ
 
 # Processamento de vídeo e ML (mantidos do Streamlit)
 opencv-python
