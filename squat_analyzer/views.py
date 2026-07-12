@@ -7,6 +7,10 @@ from django.shortcuts import render, redirect
 from django.core.files.uploadedfile import UploadedFile
 from django.http import FileResponse, Http404
 from .services.analysis_service import SquatAnalysisService
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from .validators.file_validators import MP4VideoValidator
+
 
 
 # Thresholds padrão por tipo de análise e lado
@@ -66,6 +70,14 @@ def frontal_left_analysis(request):
     if request.method == 'POST':
         video_file = request.FILES.get('video')
         person_name = request.POST.get('person_name')
+
+        if video_file:
+            try:
+                validator = MP4VideoValidator()
+                validator(video_file)
+            except ValidationError as e:
+                messages.error(request, str(e))
+                return render(request, 'squat_analyzer/frontal_left_analysis.html', context)
         
         # Parâmetros de análise
         params = {
@@ -110,6 +122,14 @@ def frontal_right_analysis(request):
     if request.method == 'POST':
         video_file = request.FILES.get('video')
         person_name = request.POST.get('person_name')
+
+        if video_file:
+            try:
+                validator = MP4VideoValidator()
+                validator(video_file)
+            except ValidationError as e:
+                messages.error(request, str(e))
+                return render(request, 'squat_analyzer/frontal_right_analysis.html', context)
         
         # Parâmetros de análise
         params = {
@@ -155,6 +175,14 @@ def sagittal_left_analysis(request):
         video_file = request.FILES.get('video')
         person_name = request.POST.get('person_name')
         user_height_cm = float(request.POST.get('user_height_cm', 170))
+
+        if video_file:
+            try:
+                validator = MP4VideoValidator()
+                validator(video_file)
+            except ValidationError as e:
+                messages.error(request, str(e))
+                return render(request, 'squat_analyzer/sagittal_left_analysis.html', context)
         
         # Parâmetros de análise
         params = {
@@ -192,6 +220,14 @@ def sagittal_right_analysis(request):
         video_file = request.FILES.get('video')
         person_name = request.POST.get('person_name')
         user_height_cm = float(request.POST.get('user_height_cm', 170))
+
+        if video_file:
+            try:
+                validator = MP4VideoValidator()
+                validator(video_file)
+            except ValidationError as e:
+                messages.error(request, str(e))
+                return render(request, 'squat_analyzer/sagittal_right_analysis.html', context)
         
         # Parâmetros de análise
         params = {

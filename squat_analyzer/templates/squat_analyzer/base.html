@@ -240,6 +240,15 @@
         .alert-info { background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
         .alert-success { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
         
+        /*flash messages*/
+        .messages { list-style: none; margin: 20px 0; padding: 0; }
+        .messages li { padding: 16px 20px; margin-bottom: 12px; border-radius: var(--radius-md); font-size: 15px; font-weight: 500; }
+        .messages .error { background: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); }
+        .messages .success { background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+        .messages .warning { background: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-border); }
+        .messages .info { background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
+
+
         /* Caixa de feedback por repetição */
         .feedback { 
             background: var(--warning-bg); 
@@ -272,6 +281,14 @@
 </head>
 <body>
     <div class="container">
+        {# Mensagens flash do Django #}
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
         {% block content %}{% endblock %}
     </div>
 </body>
