@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      # Monta o código fonte para desenvolvimento dentro do container
+      - .:/app
+      # Volume persistente para o SQLite
+      - sqlite_data:/app
+      # Volume para arquivos de mídia (uploads)
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=1
+      # Garante que o Django saiba que estamos em container se precisar
+      - ALLOWED_HOSTS=localhost,127.0.0.1,host.docker.internal
+
+volumes:
+  sqlite_data:
+  media_volume:
