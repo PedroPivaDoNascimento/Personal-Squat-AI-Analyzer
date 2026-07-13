@@ -19,6 +19,7 @@ Este é um aplicativo de visão computacional em tempo real que utiliza intelig�
 - **OpenCV:** Biblioteca de visão computacional para processamento de vídeo e imagem.
 - **MediaPipe:** Framework do Google para detecção de pontos de referência do corpo humano (pose estimation).
 - **Django:** Framework web de alto nível para o desenvolvimento do servidor e painel de controle.
+- **Scikit Learn:** Biblioteca para Machine Learning
 
 ## 🚀 Instalação
 
@@ -55,7 +56,7 @@ Siga estes passos para configurar e executar o projeto localmente:
    python manage.py migrate
    ```
 
-## 🏃 Como usar
+## 🏃 Como usar (sem o docker)
 
 1. Inicialize o servidor de desenvolvimento do Django:
    ```bash
@@ -66,6 +67,45 @@ Siga estes passos para configurar e executar o projeto localmente:
    [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
 3. Na interface web do sistema, informe o nome da planilha que será gerada com os resultados e faça o upload do vídeo que será processado.
+
+## 🐋 Como usar (com o docker)
+
+### Pré-requisitos
+
+1. Antes de iniciar, certifique-se de possuir instalado em sua máquina:
+
+- Docker
+- Docker Compose (ou Docker Compose Plugin)
+
+Você pode verificar se ambos estão instalados executando:
+
+```bash
+docker --version
+docker compose version
+```
+
+2. Construa as imagens e inicialize os containers:
+
+```bash
+docker compose up --build
+```
+
+Na primeira execução o processo pode levar alguns minutos, pois as imagens serão construídas e todas as dependências serão instaladas.
+
+Após a inicialização, o sistema estará disponível em:
+
+```
+http://localhost:8000
+```
+
+ou
+
+```
+http://127.0.0.1:8000
+```
+
+---
+
 
 ## 📬 Contato
 

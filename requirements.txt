@@ -1,3 +1,5 @@
+streamlit
+
 # Django framework
 Django>=4.2
 django-environ
