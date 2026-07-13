@@ -19,7 +19,7 @@ Este é um aplicativo de visão computacional em tempo real que utiliza intelig�
 - **OpenCV:** Biblioteca de visão computacional para processamento de vídeo e imagem.
 - **MediaPipe:** Framework do Google para detecção de pontos de referência do corpo humano (pose estimation).
 - **Django:** Framework web de alto nível para o desenvolvimento do servidor e painel de controle.
-- **Scikit Learn:** Biblioteca para Machine Learning
+- **Scikit Learn:** Biblioteca para Machine Learning 
 
 ## 🚀 Instalação
 
@@ -46,7 +46,7 @@ Siga estes passos para configurar e executar o projeto localmente:
    venv\Scripts\Activate
    ```
 
-4. Instale as dependências necessárias (certifique-se de que o `django` está listado no arquivo):
+4. Instale as dependências necessárias:
    ```bash
    pip install -r requirements.txt
    ```
@@ -56,21 +56,45 @@ Siga estes passos para configurar e executar o projeto localmente:
    python manage.py migrate
    ```
 
-## 🏃 Como usar (sem o docker)
+5. **Configure as variáveis de ambiente:**
 
-1. Inicialize o servidor de desenvolvimento do Django:
+   a) Copie o arquivo de exemplo `.env.example` para `.env`:
+   ```bash
+   # Linux/MacOS
+   cp .env.example .env
+
+   # Windows (PowerShell)
+   Copy-Item .env.example .env
+   ```
+
+   b) Edite o arquivo `.env` e configure as seguintes variáveis:
+   ```bash
+   # Para desenvolvimento local, edite com:
+   SECRET_KEY='gerar-uma-nova-chave-secreta-aqui'
+   DEBUG=True
+   ALLOWED_HOSTS=localhost,127.0.0.1
+   SECURE_SSL_REDIRECT=False
+   ```
+
+   > **⚠️ Importante:**
+   > - Para gerar uma nova `SECRET_KEY`, execute:
+   >   ```bash
+   >   python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+   >   ```
+   > - Em produção, mude `DEBUG=False` e configure `ALLOWED_HOSTS` com seu domínio real
+   > - Nunca commit o arquivo `.env` no Git (ele já está no `.gitignore`)
+
+6. Execute as migrações para configurar o banco de dados do Django:
    ```bash
    python manage.py runserver
    ```
 
-2. Abra o seu navegador e acesse o endereço local:
+7. Abra o seu navegador e acesse o endereço local:
    [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-3. Na interface web do sistema, informe o nome da planilha que será gerada com os resultados e faça o upload do vídeo que será processado.
+8. Na interface web do sistema, informe o nome da planilha que será gerada com os resultados e faça o upload do vídeo que será processado.
 
-## 🐋 Como usar (com o docker)
-
-### Pré-requisitos
+## 🐋 Configuração do Docker
 
 1. Antes de iniciar, certifique-se de possuir instalado em sua máquina:
 
@@ -104,10 +128,5 @@ ou
 http://127.0.0.1:8000
 ```
 
----
-
-
 ## 📬 Contato
-
 Se você tiver alguma dúvida ou sugestão, sinta-se à vontade para entrar em contato comigo em **pedropiva9@gmail.com**.
-
