@@ -2,7 +2,6 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:9000
-    # --- ADICIONE AQUI ---
     env_file:
       - .env
     volumes:
@@ -14,3 +13,6 @@ services:
       - media_volume:/app/media
     ports:
       - "9000:9000"
+volumes:
+  sqlite_data:
+  media_volume:
