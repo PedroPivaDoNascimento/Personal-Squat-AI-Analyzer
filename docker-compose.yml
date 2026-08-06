@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:9000
     volumes:
       # Monta o código fonte para desenvolvimento dentro do container
       - .:/app
@@ -10,7 +10,7 @@ services:
       # Volume para arquivos de mídia (uploads)
       - media_volume:/app/media
     ports:
-      - "8000:8000"
+      - "9000:9000"
     environment:
       - DEBUG=1
       # Garante que o Django saiba que estamos em container se precisar
