@@ -130,7 +130,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configurações de arquivos estáticos
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'squat_analysis_app' / 'squat_analyzer' / 'static']
+STATICFILES_DIRS = [BASE_DIR / 'squat_analyzer' / 'static']
 
 # Tempo máximo para upload de vídeos grandes
 FILE_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
