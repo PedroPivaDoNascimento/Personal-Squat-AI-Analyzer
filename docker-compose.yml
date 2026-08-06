@@ -1,7 +1,7 @@
 services:
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:9000
+    command: python manage.py runserver ifgnutest.riopomba.ifsudestemg.edu.br:9000
     env_file:
       - .env
     volumes:
