@@ -2,6 +2,9 @@ services:
   web:
     build: .
     command: python manage.py runserver 0.0.0.0:9000
+    # --- ADICIONE AQUI ---
+    env_file:
+      - .env
     volumes:
       # Monta o código fonte para desenvolvimento dentro do container
       - .:/app
@@ -11,11 +14,3 @@ services:
       - media_volume:/app/media
     ports:
       - "9000:9000"
-    environment:
-      - DEBUG=1
-      # Garante que o Django saiba que estamos em container se precisar
-      - ALLOWED_HOSTS=localhost,127.0.0.1,host.docker.internal
-
-volumes:
-  sqlite_data:
-  media_volume:
