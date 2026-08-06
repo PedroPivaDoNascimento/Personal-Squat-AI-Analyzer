@@ -10,7 +10,7 @@ services:
       # Volume para arquivos de mídia (uploads)
       - media_volume:/app/media
     ports:
-      - "8000:8000"
+      - "9000:9000"
     environment:
       - DEBUG=1
       # Garante que o Django saiba que estamos em container se precisar
