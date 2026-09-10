@@ -52,7 +52,6 @@ def show_frontal_right_analysis():
         'foot_pronation_error_threshold': foot_pronation_th 
     }
     
-    # 2. Processamento e Exibição de Resultados
     if uploaded_file_data and name_input:
         set_folders = SetFolders(person_name=name_input, plane_folder_name="frontal", side="direito")
         set_folders.create_folders()
@@ -164,7 +163,6 @@ def display_repetition_details_and_feedback(ai_analyzer):
             st.write("**Feedback para esta repetição:**")
             feedback_given = False
             
-            # Feedback baseado no status (1)
             if hip_rep_status == 1:
                 st.info(f"💡 Desvio no Quadril: **{feedback_messages.get('hip_error', 'Verifique a estabilidade lateral do quadril.')}**")
                 feedback_given = True
