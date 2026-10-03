@@ -176,6 +176,11 @@ class LeftFrontal(BaseFrontal):
         return kn_valgus_status
 
     def _check_foot_pronation_error(self):
+        # Garantia de consistência: se `side` vier vazio, o caminho de gravação
+        # seria normalizado como "planilhas/frontal/dados_pe" (fora da pasta do
+        # lado) e os arquivos pareceriam "sumidos". Assume 'esquerdo' neste analisador.
+        if not self.side:
+            self.side = "esquerdo"
         foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
         static_data = foot_data_excel_writer.convert_data_to_statistic_pandas()
         # Tirei o .values
