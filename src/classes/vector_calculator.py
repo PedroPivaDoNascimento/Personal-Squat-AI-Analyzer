@@ -21,7 +21,10 @@ class VectorCalculator:
         Returns:
             A distância euclidiana entre os dois pontos.
         """
-        return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        # np.hypot e implementado em C no NumPy: evita as operacoes
+        # intermediarias de **2 (alocacao de arrays temporarios), sendo
+        # mais rapido e a prova de overflow numerico (Otimizacao Fase 3.4).
+        return np.hypot(x2 - x1, y2 - y1)
 
     @staticmethod
     def get_line_equation(x1: float, y1: float, x2: float, y2: float) -> Tuple[float, float, float]:
@@ -93,30 +96,26 @@ class VectorCalculator:
         Retorna:
         O ângulo em graus (valor entre -180.0 e 180.0).
         """
-        # 1. Converte as coordenadas para arrays numpy
-        p1 = np.array((x1, y1))
-        p2 = np.array((x2, y2))
-        p3 = np.array((x3, y3))
+        # 1. Vetores a partir do vertice (p2) calculados com operacoes
+        #    elementares diretas via NumPy/scalar math: evita a alocacao de
+        #    tres arrays intermediarios (p1, p2, p3) por chamada - esta
+        #    funcao roda a cada frame e o custo se acumula no loop de video
+        #    (Otimizacao Fase 3.4). O contrato matematico e os resultados
+        #    permanecem identicos.
+        v21_x = x1 - x2
+        v21_y = y1 - y2
+        v23_x = x3 - x2
+        v23_y = y3 - y2
 
-        # 2. Cria os vetores a partir do vértice (p2)
-        v21 = p1 - p2
-        v23 = p3 - p2
+        # 2. Componentes para o atan2:
+        #    "seno" = Produto Vetorial (z-componente em 2D); o sinal deste
+        #    valor indica se o angulo e positivo ou negativo (sentido).
+        cross_product_z = v21_x * v23_y - v21_y * v23_x
 
-        # 3. Calcula os componentes necessários para o atan2
-        
-        # O "seno" (componente y) é o Produto Vetorial (z-componente em 2D)
-        # Produto Vetorial em 2D: v1_x * v2_y - v1_y * v2_x
-        # O sinal deste valor indica se o ângulo é positivo ou negativo (sentido).
-        cross_product_z = v21[0] * v23[1] - v21[1] * v23[0]
+        #    "cosseno" = Produto Escalar.
+        dot_product = v21_x * v23_x + v21_y * v23_y
 
-        # O "cosseno" (componente x) é o Produto Escalar (o que você já estava usando)
-        dot_product = np.dot(v21, v23)
-
-        # 4. Usa np.arctan2 (a versão do atan2 no numpy)
-        # O atan2 usa seno e cosseno para obter o ângulo no intervalo [-pi, pi]
-        angle_rad = np.arctan2(cross_product_z, dot_product)
-        
-        # 5. Converte para Graus
-        angle_deg = np.degrees(angle_rad)
-
-        return angle_deg
+        # 3. np.arctan2 usa seno e cosseno para obter o angulo no intervalo
+        #    [-pi, pi] e retorna graus em [-180.0, +180.0], conforme o
+        #    contrato de angulos orientados da docs/RULES.md item 1.
+        return float(np.degrees(np.arctan2(cross_product_z, dot_product)))

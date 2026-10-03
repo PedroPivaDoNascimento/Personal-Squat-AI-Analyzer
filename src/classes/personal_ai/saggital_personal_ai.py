@@ -57,6 +57,22 @@ class SagittalAI(BaseAI):
             if df is not None:
                 df.loc[len(df)] = [int(ts), val]
 
+    # Resolucao-alvo para downscaling previo (Otimizacao Fase 3.1): frames
+    # acima de 720p sao reduzidos antes da inferencia do MediaPipe. Os
+    # landmarks sao normalizados [0..1], portanto a geometria angular dos
+    # calculos biomecanicos permanece identica, com menos pixels na CPU/RAM.
+    MAX_PROCESS_WIDTH = 1280
+    MAX_PROCESS_HEIGHT = 720
+
+    def _prepare_frame(self, frame):
+        """Redimensiona o frame (downscaling c/ aspect ratio) se exceder 720p."""
+        h, w = frame.shape[:2]
+        if w <= self.MAX_PROCESS_WIDTH and h <= self.MAX_PROCESS_HEIGHT:
+            return frame
+        scale = min(self.MAX_PROCESS_WIDTH / w, self.MAX_PROCESS_HEIGHT / h)
+        new_w, new_h = max(1, int(w * scale)), max(1, int(h * scale))
+        return cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
     def process_video(self, draw, display):
         cap = cv2.VideoCapture(self.file_name)
         fps = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -72,8 +88,11 @@ class SagittalAI(BaseAI):
                 self.frame += 1
                 ts += 1000 / fps
                 
+                # Downscaling previo (Fase 3.1): reduz carga de CPU/RAM em videos pesados
+                frame = self._prepare_frame(frame)
+
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                res = self.pose_detector.detect(rgb)
+                res = self.pose_detector.detect(rgb, timestamp_ms=ts)
                 
                 landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
                 
@@ -90,6 +109,9 @@ class SagittalAI(BaseAI):
                     cv2.imshow('Frame', frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
+                # Desalocacao explicita dos buffers pesados do frame atual (Fase 4.2)
+                del frame, rgb, res, landmarks
+
         except Exception as e:
             print(f"ATENÇÃO: Ocorreu um erro durante o processamento do vídeo: {e}")
         finally:
