@@ -1,4 +1,3 @@
-```
 # Python
 __pycache__/
 *.py[cod]
@@ -46,7 +45,6 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
-```
 
 Personal-Squat-AI-Analyzer_Documentation.md
 planilhas/

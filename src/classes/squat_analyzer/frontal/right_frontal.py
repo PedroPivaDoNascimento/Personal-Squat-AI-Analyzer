@@ -111,7 +111,6 @@ class RightFrontal(BaseFrontal):
                     self.consecutive_hip_error_counter = 0
 
 
-                    
             except Exception as e:
                 print(f"Erro ao calcular inclinação do quadril: {e}")
                 self.consecutive_hip_error_counter = 0
