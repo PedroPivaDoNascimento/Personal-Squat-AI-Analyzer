@@ -138,9 +138,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'squat_analyzer' / 'static']
 
-# Tempo máximo para upload de vídeos grandes
-FILE_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
+# ------------------------------------------------------------------ #
+# Otimizacao de Upload (docs/tasks/(2)OPTIMIZE.md - Fase 2)          #
+# ------------------------------------------------------------------ #
+# FILE_UPLOAD_MAX_MEMORY_SIZE baixo forcа o Django a gravar uploads
+# que excedem 1 MB diretamente em TemporaryUploadedFile (disco), em vez
+# de reter videos MP4 inteiros na RAM do worker (InMemoryUploadedFile).
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1048576   # 1 MB -> streaming para disco
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600 # ~100MB -> teto de payload (validado por MP4VideoValidator)
+
+# Handlers explicitos: o MemoryFileUploadHandler pequeno transfere o resto
+# para TemporaryFileUploadHandler, que faz o streaming direto para o disco
+# temporario do servidor sem buffer completo em memoria.
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
 
 # Ajustes quando estiver em produção com HTTPS
 # Redireciona todas as requisições HTTP para HTTPS
