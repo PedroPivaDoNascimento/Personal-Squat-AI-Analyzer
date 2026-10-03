@@ -1,7 +1,10 @@
 """
 Serviço de persistência dos dados de pé (brutos e estatísticos) - Camada de Service
-Encapsula a lógica de gravação das planilhas `dados_pe.xlsx` no diretório
+Encapsula a lógica de gravação das planilhas no diretório
 `planilhas/<plano>/<lado>/dados_pe/dados brutos|dados estatisticos/`.
+Cada repetição concluída gera um arquivo próprio, identificado pelo nome do
+voluntário e pela repetição: `dados_pe_<voluntario>_rep<N>.xlsx` (evita que
+apenas a última repetição seja mantida).
 
 Responsabilidade única: orquestrar a escrita dos DataFrames produzidos pela
 análise frontal nas planilhas acumulativas, sem depender de frameworks web.
