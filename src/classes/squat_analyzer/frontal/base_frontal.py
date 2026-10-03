@@ -61,7 +61,12 @@ class BaseFrontal(ABC):
         self.repetition_frame_counts = []
 
         self.foot_repeat_data = []
-    
+
+        # Callback opcional (camada de serviço): chamado a cada repetição
+        # concluída com (numero_da_rep, frames_de_pe_da_rep). Usado para
+        # persistir os dados brutos/estatísticos de pé em Excel.
+        self.on_repetition_completed = None
+
     def _get_foot_frames_for_repetition(self, repetition_number):
         """
         Recorta os frames de pé correspondentes a uma repetição concluída,
@@ -184,10 +189,11 @@ class BaseFrontal(ABC):
             self.total_foot_pronation_error_counter = 0
             # Os consecutivos serão resetados no 'inicial'
 
-            if self.repetitions_detected in self.options_marcadas:
-                foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
-                foot_data_excel_writer.write_raw_foot_data()
-                foot_data_excel_writer.write_statistic_foot_data()
+            # A coleta dos dados de pé é SEMPRE persistida (independente das
+            # flags da interface); a gravação em disco é delegada à camada de
+            # serviço via callback, mantendo esta classe livre de I/O próprio.
+            if self.on_repetition_completed and self.foot_repeat_data:
+                self.on_repetition_completed(self.repetitions_detected, list(self.foot_repeat_data))
 
             self.foot_repeat_data = []
 

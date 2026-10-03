@@ -26,7 +26,7 @@ class FootDataService:
     de I/O não intencionais.
     """
 
-    def save_repetition_foot_data(self, analyzer, repetition_number):
+    def save_repetition_foot_data(self, analyzer, repetition_number, frames=None):
         """
         Salva os dados brutos e estatísticos da repetição concluída.
 
@@ -38,15 +38,18 @@ class FootDataService:
             analyzer: Instância do analisador frontal (possui `foot_repeat_data`,
                 `person_name` e `side`).
             repetition_number (int): Número da repetição recém-concluída.
+            frames (list, opcional): Frames de pé exatos da repetição (usado
+                pelo callback de tempo real; se omitido, recorta do histórico).
 
         Returns:
             bool: True se ambos os arquivos foram gravados com sucesso.
         """
-        frames = []
-        if hasattr(analyzer, "_get_foot_frames_for_repetition"):
-            frames = analyzer._get_foot_frames_for_repetition(repetition_number)
-        if not frames:
-            frames = list(getattr(analyzer, "foot_repeat_data", []) or [])
+        if frames is None:
+            frames = []
+            if hasattr(analyzer, "_get_foot_frames_for_repetition"):
+                frames = analyzer._get_foot_frames_for_repetition(repetition_number)
+            if not frames:
+                frames = list(getattr(analyzer, "foot_repeat_data", []) or [])
 
         if not frames:
             logger.warning(
@@ -75,9 +78,9 @@ class FootDataService:
             return False
 
         logger.info(
-            "Dados de pé da repetição %s salvos em 'planilhas/frontal/%s/dados_pe/'.",
+            "Dados de pé da repetição %s salvos em: %s",
             repetition_number,
-            str(analyzer.side).lower(),
+            os.path.abspath(os.path.join('planilhas', 'frontal', str(analyzer.side).lower(), 'dados_pe')),
         )
         return True
 

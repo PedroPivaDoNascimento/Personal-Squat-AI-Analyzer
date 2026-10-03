@@ -71,18 +71,23 @@ class SquatAnalysisService:
                 options_marcadas=selected_reps,
                 **params
             )
+            # Registra o callback de persistência ANTES do processamento:
+            # a cada repetição concluída, os dados de pé (brutos e
+            # estatísticos) são gravados em planilhas/frontal/<lado>/dados_pe/,
+            # independentemente das flags da interface. A gravação fica na
+            # camada de serviço; a classe analisadora não faz I/O diretamente.
+            foot_data_service = FootDataService()
+            self.ai_instance.squat_analyzer.on_repetition_completed = (
+                lambda rep_num, rep_frames: foot_data_service.save_repetition_foot_data(
+                    analyzer=self.ai_instance.squat_analyzer,
+                    repetition_number=rep_num,
+                    frames=rep_frames,
+                )
+            )
+
             self.ai_instance.process_video(draw=False, display=False)
 
-            # Persiste os dados de pé (brutos e estatísticos) das repetições
-            # marcadas. A gravação é feita aqui, na camada de serviço, para que
-            # a classe analisadora não tenha efeitos colaterais de I/O ocultos.
-            foot_data_dir = FootDataService().get_foot_data_dir(person_name, side)
-            for rep_number in selected_reps:
-                if rep_number <= self.ai_instance.squat_analyzer.repetitions_detected:
-                    FootDataService().save_repetition_foot_data(
-                        analyzer=self.ai_instance.squat_analyzer,
-                        repetition_number=rep_number,
-                    )
+            foot_data_dir = foot_data_service.get_foot_data_dir(person_name, side)
 
             # Gera relatório Excel
             excel_writer = FrontalReportExcelWriter(
