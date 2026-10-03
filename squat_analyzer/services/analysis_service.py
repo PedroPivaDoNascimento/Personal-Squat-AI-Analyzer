@@ -3,6 +3,7 @@ Serviço de análise de agachamento - Camada de Modelo/Service
 Encapsula toda a lógica de negócio para processamento de vídeo e ML.
 Aplica o princípio de Responsabilidade Única (SOLID).
 """
+import gc
 import os
 import sys
 import tempfile
@@ -54,12 +55,15 @@ class SquatAnalysisService:
         )
         set_folders.create_folders()
         
-        # Salva vídeo temporariamente
+        # Salva vídeo temporariamente: streaming em chunks de 1 MB para o
+        # disco, evitando carregar arquivos de ate 100 MB inteiros na RAM
+        # (video_file.read() completo) - Otimizacao Fase 2.3/RAM.
         ext = os.path.splitext(video_file.name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_file:
-            tmp_file.write(video_file.read())
+            for chunk in video_file.chunks():
+                tmp_file.write(chunk)
             temp_path = tmp_file.name
-        
+
         try:
             # Instancia e processa com a IA
             ai_side = "right" if side == "direito" else "left"
@@ -98,17 +102,49 @@ class SquatAnalysisService:
             excel_writer.generate_report()
             
             # Extrai resultados
-            self.analysis_result = self._extract_frontal_results()
+            self.analysis_result = self._extract_frontal_results(self.ai_instance.squat_analyzer)
             # Informa ao usuário onde os dados de pé foram gravados
             self.analysis_result['foot_data_dir'] = foot_data_dir
             
         finally:
-            # Limpa arquivo temporário
+            # Limpeza deterministica de recursos pesados (Otimizacao Fase 4):
+            # 1) exclusao fisica do video temporario em disco;
+            # 2) liberacao explicita do PoseLandmarker/Graph (native memory);
+            # 3) quebra das referencias Python para o GC recolher os buffers.
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-        
+
+            self._release_ai_resources()
+
+        # Coleta de lixo explicita antes de devolver a resposta HTTP ao
+        # usuario, garantindo que a RAM retorne ao nivel baseline entre
+        # analises consecutivas (Otimizacao Fase 4.3).
+        gc.collect()
+
         return self.analysis_result
-    
+
+    def _release_ai_resources(self):
+        """
+        Libera estritamente os recursos de visao computacional da ultima
+        analise (Fases 4.1 e 4.2). O close() do MediaPipe ja e feito no bloco
+        finally de process_video(); aqui remove-se as referencias Python e
+        garante-se o fechamento redundante em caso de excecao no pipeline.
+        """
+        ai = self.ai_instance
+        if ai is not None:
+            try:
+                detector = getattr(ai, 'pose_detector', None)
+                if detector is not None:
+                    detector.close()
+            except Exception:
+                # Detector ja fechado no finally do process_video: ignorar
+                pass
+            finally:
+                ai.pose_detector = None
+
+        # Quebra das referencias aos objetos pesados (IA, resultado anterior)
+        self.ai_instance = None
+
     def analyze_sagittal(self, video_file, person_name, side, user_height_cm, params):
         """
         Realiza análise sagital (direito ou esquerdo).
@@ -131,12 +167,15 @@ class SquatAnalysisService:
         )
         set_folders.create_folders()
         
-        # Salva vídeo temporariamente
+        # Salva vídeo temporariamente: streaming em chunks de 1 MB para o
+        # disco, evitando carregar arquivos de ate 100 MB inteiros na RAM
+        # (video_file.read() completo) - Otimizacao Fase 2.3/RAM.
         ext = os.path.splitext(video_file.name)[1]
         with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_file:
-            tmp_file.write(video_file.read())
+            for chunk in video_file.chunks():
+                tmp_file.write(chunk)
             temp_path = tmp_file.name
-        
+
         try:
             # Instancia e processa com a IA
             ai_side = "right" if side == "direito" else "left"
@@ -159,18 +198,25 @@ class SquatAnalysisService:
             excel_writer.generate_report()
             
             # Extrai resultados
-            self.analysis_result = self._extract_sagittal_results()
+            self.analysis_result = self._extract_sagittal_results(self.ai_instance.squat_analyzer)
             
         finally:
-            # Limpa arquivo temporário
+            # Limpeza deterministica de recursos pesados (Otimizacao Fase 4):
+            # exclusao fisica do video temporario + liberacao do MediaPipe.
             if os.path.exists(temp_path):
                 os.remove(temp_path)
-        
+
+            self._release_ai_resources()
+
+        # Coleta de lixo explicita antes de devolver a resposta HTTP ao
+        # usuario, garantindo que a RAM retorne ao nivel baseline entre
+        # analises consecutivas (Otimizacao Fase 4.3).
+        gc.collect()
+
         return self.analysis_result
     
-    def _extract_frontal_results(self):
+    def _extract_frontal_results(self, analyzer):
         """Extrai resultados padronizados da análise frontal."""
-        analyzer = self.ai_instance.squat_analyzer
         
         # Prepara dados dos gráficos por repetição
         repetition_charts = []
@@ -222,9 +268,8 @@ class SquatAnalysisService:
             'dataframes': dataframes
         }
     
-    def _extract_sagittal_results(self):
+    def _extract_sagittal_results(self, analyzer):
         """Extrai resultados padronizados da análise sagital."""
-        analyzer = self.ai_instance.squat_analyzer
         
         # Prepara dados dos gráficos por repetição
         repetition_charts = []

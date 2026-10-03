@@ -6,6 +6,11 @@ from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
 from classes.excel.foot_data_excel_writer import FootDataExcelWriter
 
+# Cache de modelos scikit-learn carregados via joblib (evita I/O +
+# deserializacao repetida por repeticao analisada - Otimizacao Fase 3.3).
+_MODEL_CACHE = {}
+
+
 
 class LeftFrontal(BaseFrontal):
     
@@ -186,9 +191,15 @@ class LeftFrontal(BaseFrontal):
         # Tirei o .values
         X = static_data.iloc[:, 2:]
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_esquerdo.pkl")
-        model = joblib.load(model_path)
+        # Cache de modelo em nivel de modulo (Otimizacao Fase 3.3): o .pkl
+        # era desserializado do disco a cada repeticao concluida; agora ele
+        # e carregado uma unica vez e reutilizado entre analises do processo.
+        model = _MODEL_CACHE.get('modelo_pe_frontal_esquerdo.pkl')
+        if model is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_esquerdo.pkl")
+            model = joblib.load(model_path)
+            _MODEL_CACHE['modelo_pe_frontal_esquerdo.pkl'] = model
 
         y_pred = model.predict(X)
         foot_pronation_status = y_pred[0]
