@@ -10,11 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Diretório raiz dos relatórios Excel gerados pelo pipeline (planilhas/).
+# Centralizado aqui para que o Service Layer, o Management Command de limpeza
+# e o agendador em segundo plano usem exatamente o mesmo caminho absoluto.
+PLANILHAS_ROOT_DIR = BASE_DIR / 'planilhas'
 
 # Iniciando o environ
 env = environ.Env(
@@ -161,3 +167,38 @@ SECURE_BROWSER_XSS_FILTER = True
 
 # Referrer Policy
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# ------------------------------------------------------------------ #
+# Logging estruturado (Fase 3 - tarefa 3.2)                          #
+# Auditoria da rotina de limpeza autonoma de planilhas: registra o    #
+# nome do arquivo deletado, caminho completo e timestamp da exclusao. #
+# ------------------------------------------------------------------ #
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'structured': {
+            'format': '[{asctime}] [{levelname}] {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'structured',
+        },
+    },
+    'loggers': {
+        # Logger dedicado à camada de serviço/agendador de limpeza de planilhas
+        'squat_analyzer.services.cleanup_service': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'squat_analyzer.management.commands.cleanup_oldest_sheet': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
