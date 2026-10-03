@@ -17,6 +17,8 @@ from src.classes.excel.squat_report_excel_writer.frontal_report_excel_writer imp
 from src.classes.excel.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
 from src.classes.excel.set_folders import SetFolders
 
+from squat_analyzer.services.foot_data_service import FootDataService
+
 
 class SquatAnalysisService:
     """
@@ -69,8 +71,24 @@ class SquatAnalysisService:
                 options_marcadas=selected_reps,
                 **params
             )
+            # Registra o callback de persistência ANTES do processamento:
+            # a cada repetição concluída, os dados de pé (brutos e
+            # estatísticos) são gravados em planilhas/frontal/<lado>/dados_pe/,
+            # independentemente das flags da interface. A gravação fica na
+            # camada de serviço; a classe analisadora não faz I/O diretamente.
+            foot_data_service = FootDataService()
+            self.ai_instance.squat_analyzer.on_repetition_completed = (
+                lambda rep_num, rep_frames: foot_data_service.save_repetition_foot_data(
+                    analyzer=self.ai_instance.squat_analyzer,
+                    repetition_number=rep_num,
+                    frames=rep_frames,
+                )
+            )
+
             self.ai_instance.process_video(draw=False, display=False)
-            
+
+            foot_data_dir = foot_data_service.get_foot_data_dir(person_name, side)
+
             # Gera relatório Excel
             excel_writer = FrontalReportExcelWriter(
                 person_name=person_name,
@@ -81,6 +99,8 @@ class SquatAnalysisService:
             
             # Extrai resultados
             self.analysis_result = self._extract_frontal_results()
+            # Informa ao usuário onde os dados de pé foram gravados
+            self.analysis_result['foot_data_dir'] = foot_data_dir
             
         finally:
             # Limpa arquivo temporário
