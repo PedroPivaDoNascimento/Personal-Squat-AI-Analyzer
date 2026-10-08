@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 
 from classes.excel.set_folders import SetFolders
@@ -127,12 +128,24 @@ class FootDataExcelWriter:
         return df_estatistico
         
 
+    def _build_file_name(self):
+        """
+        Monta o nome do arquivo Excel identificando o usuário (voluntário) e a
+        repetição à qual os dados pertencem.
+
+        Returns:
+            str: Nome no padrão `dados_pe_<voluntario>_rep<repeticao>.xlsx`.
+        """
+        person_slug = re.sub(r'[^\w\-]+', '_', str(self.person_name).strip())
+        return f'dados_pe_{person_slug}_rep{self.repetition}.xlsx'
+
     def write_raw_foot_data(self):
         """
-        Salva os dados de repetição de pé em um arquivo Excel, acumulando novas linhas.
+        Salva os dados brutos de repetição de pé em um arquivo Excel próprio
+        (um por voluntário/repetição), sem sobrescrever repetições anteriores.
         """
         path_folder_repetition = os.path.normpath(self._create_folder_raw_data())
-        file_path = os.path.join(path_folder_repetition, 'dados_pe.xlsx')
+        file_path = os.path.join(path_folder_repetition, self._build_file_name())
 
         # Converte os dados atuais para o formato de uma linha larga
         df_novo = self._convert_data_to_raw_pandas()
@@ -163,10 +176,12 @@ class FootDataExcelWriter:
 
     def write_statistic_foot_data(self):
         """
-        Salva os dados de repetição de pé em um arquivo Excel, acumulando novas linhas.
+        Salva os dados estatísticos de repetição de pé em um arquivo Excel
+        próprio (um por voluntário/repetição), sem sobrescrever repetições
+        anteriores.
         """
         path_folder_repetition = os.path.normpath(self._create_folder_statistic_data())
-        file_path = os.path.join(path_folder_repetition, 'dados_pe.xlsx')
+        file_path = os.path.join(path_folder_repetition, self._build_file_name())
 
         # Converte os dados atuais para o formato de uma linha larga
         df_novo = self.convert_data_to_statistic_pandas()

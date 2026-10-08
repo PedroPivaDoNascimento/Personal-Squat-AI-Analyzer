@@ -10,11 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Diretório raiz dos relatórios Excel gerados pelo pipeline (planilhas/).
+# Centralizado aqui para que o Service Layer, o Management Command de limpeza
+# e o agendador em segundo plano usem exatamente o mesmo caminho absoluto.
+PLANILHAS_ROOT_DIR = BASE_DIR / 'planilhas'
 
 # Iniciando o environ
 env = environ.Env(
@@ -132,9 +138,22 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'squat_analyzer' / 'static']
 
-# Tempo máximo para upload de vídeos grandes
-FILE_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 102428800  # 100MB
+# ------------------------------------------------------------------ #
+# Otimizacao de Upload (docs/tasks/(2)OPTIMIZE.md - Fase 2)          #
+# ------------------------------------------------------------------ #
+# FILE_UPLOAD_MAX_MEMORY_SIZE baixo forcа o Django a gravar uploads
+# que excedem 1 MB diretamente em TemporaryUploadedFile (disco), em vez
+# de reter videos MP4 inteiros na RAM do worker (InMemoryUploadedFile).
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1048576   # 1 MB -> streaming para disco
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600 # ~100MB -> teto de payload (validado por MP4VideoValidator)
+
+# Handlers explicitos: o MemoryFileUploadHandler pequeno transfere o resto
+# para TemporaryFileUploadHandler, que faz o streaming direto para o disco
+# temporario do servidor sem buffer completo em memoria.
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+]
 
 # Ajustes quando estiver em produção com HTTPS
 # Redireciona todas as requisições HTTP para HTTPS
@@ -161,3 +180,38 @@ SECURE_BROWSER_XSS_FILTER = True
 
 # Referrer Policy
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# ------------------------------------------------------------------ #
+# Logging estruturado (Fase 3 - tarefa 3.2)                          #
+# Auditoria da rotina de limpeza autonoma de planilhas: registra o    #
+# nome do arquivo deletado, caminho completo e timestamp da exclusao. #
+# ------------------------------------------------------------------ #
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'structured': {
+            'format': '[{asctime}] [{levelname}] {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'structured',
+        },
+    },
+    'loggers': {
+        # Logger dedicado à camada de serviço/agendador de limpeza de planilhas
+        'squat_analyzer.services.cleanup_service': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'squat_analyzer.management.commands.cleanup_oldest_sheet': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

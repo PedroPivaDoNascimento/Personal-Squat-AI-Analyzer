@@ -5,6 +5,11 @@ import os
 from ...vector_calculator import VectorCalculator
 from .base_frontal import BaseFrontal
 from classes.excel.foot_data_excel_writer import FootDataExcelWriter
+
+# Cache de modelos scikit-learn carregados via joblib (evita I/O +
+# deserializacao repetida por repeticao analisada - Otimizacao Fase 3.3).
+_MODEL_CACHE = {}
+
 class RightFrontal(BaseFrontal):
     
     def create_dictionary_landmarks(self, lm_obj):
@@ -111,7 +116,6 @@ class RightFrontal(BaseFrontal):
                     self.consecutive_hip_error_counter = 0
 
 
-                    
             except Exception as e:
                 print(f"Erro ao calcular inclinação do quadril: {e}")
                 self.consecutive_hip_error_counter = 0
@@ -153,13 +157,24 @@ class RightFrontal(BaseFrontal):
         return kn_valgus_status
 
     def _check_foot_pronation_error(self):
+        # Garantia de consistência: se `side` vier vazio, o caminho de gravação
+        # seria normalizado como "planilhas/frontal/dados_pe" (fora da pasta do
+        # lado) e os arquivos pareceriam "sumidos". Assume 'direito' neste analisador.
+        if not self.side:
+            self.side = "direito"
         foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
         static_data = foot_data_excel_writer.convert_data_to_statistic_pandas()
         X = static_data.iloc[:, 2:].values
 
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_direito.pkl")
-        model = joblib.load(model_path)
+        # Cache de modelo em nivel de modulo (Otimizacao Fase 3.3): o .pkl
+        # era desserializado do disco a cada repeticao concluida; agora ele
+        # e carregado uma unica vez e reutilizado entre analises do processo.
+        model = _MODEL_CACHE.get('modelo_pe_frontal_direito.pkl')
+        if model is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_direito.pkl")
+            model = joblib.load(model_path)
+            _MODEL_CACHE['modelo_pe_frontal_direito.pkl'] = model
 
         y_pred = model.predict(X)
         foot_pronation_status = y_pred[0]

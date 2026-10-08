@@ -20,3 +20,6 @@ joblib
 # Navegador para testes (opcional)
 webdriver-manager
 selenium
+
+# Agendador em segundo plano (background job de limpeza autonoma a cada 1 hora)
+APScheduler>=3.10

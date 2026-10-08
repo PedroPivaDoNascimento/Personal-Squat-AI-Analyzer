@@ -12,8 +12,29 @@ services:
       - sqlite_data:/app
       # Volume para arquivos de mídia (uploads)
       - media_volume:/app/media
+      # Volume compartilhado das planilhas geradas (leitura/escrita)
+      - planilhas_volume:/app/planilhas
     ports:
       - "9000:9000"
+
+  # Worker isolado: rotina periodica autonoma de limpeza da planilha .xlsx
+  # mais antiga em planilhas/, com disparo exato a cada 1 hora (24/7),
+  # sem depender de acessos de usuarios ao site. Compartilha o mesmo volume
+  # montado pelo servico web, garantindo visao identica dos relatorios.
+  sheet_cleanup_worker:
+    build: .
+    restart: always
+    command: python manage.py cleanup_oldest_sheet --loop --interval-seconds 3600
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      # Mesmo volume de planilhas do web -> permissoes de leitura/escrita
+      - planilhas_volume:/app/planilhas
+    depends_on:
+      - web
+
 volumes:
   sqlite_data:
   media_volume:
+  planilhas_volume:
