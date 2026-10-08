@@ -2,6 +2,13 @@ import os
 
 class SetFolders():
 
+    # Nome da subpasta que concentra os dados de segmentos biomecânicos
+    # (séries temporais brutas e estatísticas) definidos em
+    # docs/tasks/(3)NEW-DATAXANALYTICS-SHEETS.md.
+    SEGMENT_DATA_FOLDER_NAME = "dados_do_segmento"
+    SEGMENT_RAW_SUBFOLDER_NAME = "dados brutos"
+    SEGMENT_STAT_SUBFOLDER_NAME = "estatistica"
+
     def __init__(self, person_name, plane_folder_name, side="direito"):
         """
         Inicializa o criador de pastas.
@@ -43,3 +50,48 @@ class SetFolders():
             os.makedirs(final_output_folder)
         
         return final_output_folder
+
+    def _side_folder_path(self):
+        """
+        Retorna o caminho da pasta do lado sem criar nada em disco:
+        `planilhas/<plano>/<lado>`.
+        """
+        return os.path.join(
+            'planilhas', self.plane_folder_name, str(self.side).lower()
+        )
+
+    def create_segment_folders(self):
+        """
+        Cria (de forma determinística e idempotente, via os.makedirs com
+        exist_ok=True) a árvore aninhada de dados de segmentos biomecânicos:
+
+            planilhas/<plano>/<lado>/dados_do_segmento/
+            ├── dados brutos/
+            └── estatistica/
+
+        Returns:
+            dict: {'base': <dados_do_segmento>, 'raw': <dados brutos>,
+                   'statistic': <estatistica>} com os caminhos relativos.
+        """
+        base_folder = os.path.join(
+            self._side_folder_path(), self.SEGMENT_DATA_FOLDER_NAME
+        )
+        raw_folder = os.path.join(base_folder, self.SEGMENT_RAW_SUBFOLDER_NAME)
+        statistic_folder = os.path.join(base_folder, self.SEGMENT_STAT_SUBFOLDER_NAME)
+
+        for folder in (base_folder, raw_folder, statistic_folder):
+            os.makedirs(folder, exist_ok=True)
+
+        return {
+            'base': base_folder,
+            'raw': raw_folder,
+            'statistic': statistic_folder,
+        }
+
+    def get_segment_raw_data_folder(self):
+        """Garante e retorna o caminho de `.../dados_do_segmento/dados brutos/`."""
+        return self.create_segment_folders()['raw']
+
+    def get_segment_statistic_data_folder(self):
+        """Garante e retorna o caminho de `.../dados_do_segmento/estatistica/`."""
+        return self.create_segment_folders()['statistic']

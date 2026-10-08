@@ -67,6 +67,13 @@ class BaseSaggital(ABC):
 
         self.repetition_timestamps = []
 
+        # Callback opcional (camada de servico): chamado a cada repeticao
+        # concluida com (numero_da_rep). A persistencia das planilhas de
+        # segmentos (dados_do_segmento) e delegada ao servico via
+        # SegmentDataCollector compartilhado com o FrontalAI (ADR-006),
+        # mantendo esta classe livre de I/O proprio.
+        self.on_segment_repetition_completed = None
+
         self.trunk_intersections_df = pd.DataFrame(columns=[
             'Tempo (ms)', 
             'Comprimento Tíbia (cm)', 
@@ -179,6 +186,14 @@ class BaseSaggital(ABC):
             
             self.repetitions_detected += 1
             self.repetition_timestamps.append(current_ts / 1000)
+
+            # Notifica a camada de servico para persistir as planilhas de
+            # dados_do_segmento desta repeticao (nunca quebra o pipeline).
+            if self.on_segment_repetition_completed:
+                try:
+                    self.on_segment_repetition_completed(self.repetitions_detected)
+                except Exception as exc:
+                    print(f"Aviso: falha no callback de segmentos (rep {self.repetitions_detected}): {exc}")
             
     def finalize_analysis(self, current_ts):
         """

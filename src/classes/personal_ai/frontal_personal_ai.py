@@ -25,8 +25,9 @@ class FrontalAI(BaseAI):
 
         self.options_marcadas = options_marcadas
         
+        super().__init__(file_name, name_pessoa, 0, model_path,
+                         plane_folder_name='frontal', **kwargs)
         # user_height_cm foi passado como 0 (ou None) para satisfazer a BaseAI
-        super().__init__(file_name, name_pessoa, 0, model_path, **kwargs)
         
         if (side == "right"):
             self.squat_analyzer = RightFrontal(**kwargs, side="direito", person_name=name_pessoa, options_marcadas=options_marcadas)
@@ -86,6 +87,7 @@ class FrontalAI(BaseAI):
                     
                 self.frame += 1
                 ts += 1000 / fps
+                self._last_ts_ms = ts
                 
                 # Downscaling previo (Fase 3.1): reduz carga de CPU/RAM em videos pesados
                 frame = self._prepare_frame(frame)
@@ -94,6 +96,10 @@ class FrontalAI(BaseAI):
                 res = self.pose_detector.detect(rgb, timestamp_ms=ts)
                 
                 landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
+                
+                # Coleta das series temporais dos segmentos biomecanicos
+                # (dados_do_segmento - task (3)NEW-DATAXANALYTICS-SHEETS.md)
+                self._collect_segment_frame(landmarks)
                 
                 current_hip, current_kn_valgus, current_foot_pronation = \
                     self.squat_analyzer.process_frame_landmarks(landmarks, ts)

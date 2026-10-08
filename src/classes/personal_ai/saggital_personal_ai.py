@@ -20,7 +20,8 @@ class SagittalAI(BaseAI):
             'foot_error_threshold': foot_error_threshold,
         }
         
-        super().__init__(file_name, name_pessoa, user_height_cm, model_path, **kwargs)
+        super().__init__(file_name, name_pessoa, user_height_cm, model_path,
+                         plane_folder_name='sagital', **kwargs)
         
         if (side == "right"):
             self.squat_analyzer = RightSaggital(
@@ -87,6 +88,7 @@ class SagittalAI(BaseAI):
                     
                 self.frame += 1
                 ts += 1000 / fps
+                self._last_ts_ms = ts
                 
                 # Downscaling previo (Fase 3.1): reduz carga de CPU/RAM em videos pesados
                 frame = self._prepare_frame(frame)
@@ -95,6 +97,10 @@ class SagittalAI(BaseAI):
                 res = self.pose_detector.detect(rgb, timestamp_ms=ts)
                 
                 landmarks = res.pose_landmarks[0] if res.pose_landmarks and res.pose_landmarks[0] else None
+                
+                # Coleta das series temporais dos segmentos biomecanicos
+                # (dados_do_segmento - task (3)NEW-DATAXANALYTICS-SHEETS.md)
+                self._collect_segment_frame(landmarks)
                 
                 # Processa os dados do frame (Camada Controller/Model)
                 current_hp, current_tr, current_hl, current_kn = \

@@ -6,13 +6,14 @@ from mediapipe.framework.formats import landmark_pb2
 from abc import ABC, abstractmethod
 
 from ..pose_detector import PoseDetector 
+from ..segment_data_collector import SegmentDataCollector
 
 class BaseAI(ABC):
     """
     Classe base abstrata para a análise de movimento.
     Define a infraestrutura (detector, desenho) e o contrato de processamento.
     """
-    def __init__(self, file_name, name_pessoa, user_height_cm, model_path, **kwargs):
+    def __init__(self, file_name, name_pessoa, user_height_cm, model_path, plane_folder_name=None, **kwargs):
         
         self.user_height_cm = user_height_cm
         self.file_name = file_name
@@ -22,6 +23,16 @@ class BaseAI(ABC):
         self.pose_detector = PoseDetector(model_path)
         self.squat_analyzer = None 
         
+        # Coletor das séries temporais dos segmentos biomecânicos
+        # (docs/tasks/(3)NEW-DATAXANALYTICS-SHEETS.md - Fase 2). Fica em None
+        # quando o plano não é 'frontal'/'sagital', desativando a coleta sem
+        # quebrar fluxos legados.
+        self.plane_folder_name = plane_folder_name
+        self.segment_collector = (
+            SegmentDataCollector(plane_folder_name)
+            if plane_folder_name in ('frontal', 'sagital') else None
+        )
+
         self.head_df = None
         self.trunk_df = None
         self.heel_df = None
@@ -53,3 +64,20 @@ class BaseAI(ABC):
         Método abstrato: Deve ser implementado pela classe filha.
         """
         pass
+
+    def _collect_segment_frame(self, landmarks):
+        """
+        Alimenta o coletor de segmentos (dados_do_segmento) com o frame atual.
+        Nunca interrompe o pipeline principal: falhas de coleta são apenas
+        registradas (docs/tasks/(3)NEW-DATAXANALYTICS-SHEETS.md - tarefa 4.1).
+        """
+        if self.segment_collector is None or landmarks is None:
+            return
+        try:
+            self.segment_collector.collect_frame(
+                landmarks_obj=landmarks,
+                timestamp_ms=getattr(self, '_last_ts_ms', 0),
+                frame_number=self.frame,
+            )
+        except Exception as exc:
+            print(f"Aviso: falha ao coletar dados de segmento no frame {self.frame}: {exc}")
