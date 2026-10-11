@@ -18,7 +18,7 @@ from src.classes.excel.squat_report_excel_writer.frontal_report_excel_writer imp
 from src.classes.excel.squat_report_excel_writer.sagittal_report_excel_writer import SagittalReportExcelWriter
 from src.classes.excel.set_folders import SetFolders
 
-from squat_analyzer.services.foot_data_service import FootDataService
+from squat_analyzer.services.segments_data_service import SegmentsDataService
 
 
 class SquatAnalysisService:
@@ -76,22 +76,21 @@ class SquatAnalysisService:
                 **params
             )
             # Registra o callback de persistência ANTES do processamento:
-            # a cada repetição concluída, os dados de pé (brutos e
-            # estatísticos) são gravados em planilhas/frontal/<lado>/dados_pe/,
-            # independentemente das flags da interface. A gravação fica na
-            # camada de serviço; a classe analisadora não faz I/O diretamente.
-            foot_data_service = FootDataService()
+            # a cada repetição concluída, todos os segmentos frontais (pé, joelho
+            # e quadril — brutos e estatísticos) são gravados nas respectivas
+            # subpastas de planilhas/frontal/<lado>/dados_<segmento>/.
+            # A gravação fica na camada de serviço; a classe analisadora não
+            # faz I/O diretamente.
+            segments_service = SegmentsDataService()
             self.ai_instance.squat_analyzer.on_repetition_completed = (
-                lambda rep_num, rep_frames: foot_data_service.save_repetition_foot_data(
+                lambda rep_num, seg_data: segments_service.save_frontal_repetition(
                     analyzer=self.ai_instance.squat_analyzer,
                     repetition_number=rep_num,
-                    frames=rep_frames,
+                    segment_data=seg_data,
                 )
             )
 
             self.ai_instance.process_video(draw=False, display=False)
-
-            foot_data_dir = foot_data_service.get_foot_data_dir(person_name, side)
 
             # Gera relatório Excel
             excel_writer = FrontalReportExcelWriter(
@@ -100,12 +99,10 @@ class SquatAnalysisService:
                 side=side
             )
             excel_writer.generate_report()
-            
+
             # Extrai resultados
             self.analysis_result = self._extract_frontal_results(self.ai_instance.squat_analyzer)
-            # Informa ao usuário onde os dados de pé foram gravados
-            self.analysis_result['foot_data_dir'] = foot_data_dir
-            
+
         finally:
             # Limpeza deterministica de recursos pesados (Otimizacao Fase 4):
             # 1) exclusao fisica do video temporario em disco;
@@ -187,8 +184,21 @@ class SquatAnalysisService:
                 model_path=self.MODEL_PATH,
                 **params
             )
+            # Registra o callback de persistência ANTES do processamento:
+            # a cada repetição concluída, todos os segmentos sagitais (pé, joelho,
+            # tronco e cabeça — brutos e estatísticos) são gravados nas respectivas
+            # subpastas de planilhas/sagital/<lado>/dados_<segmento>/.
+            segments_service = SegmentsDataService()
+            self.ai_instance.squat_analyzer.on_repetition_completed = (
+                lambda rep_num, seg_data: segments_service.save_sagittal_repetition(
+                    analyzer=self.ai_instance.squat_analyzer,
+                    repetition_number=rep_num,
+                    segment_data=seg_data,
+                )
+            )
+
             self.ai_instance.process_video(draw=False, display=False)
-            
+
             # Gera relatório Excel
             excel_writer = SagittalReportExcelWriter(
                 person_name=person_name,
@@ -196,10 +206,10 @@ class SquatAnalysisService:
                 side=side
             )
             excel_writer.generate_report()
-            
+
             # Extrai resultados
             self.analysis_result = self._extract_sagittal_results(self.ai_instance.squat_analyzer)
-            
+
         finally:
             # Limpeza deterministica de recursos pesados (Otimizacao Fase 4):
             # exclusao fisica do video temporario + liberacao do MediaPipe.

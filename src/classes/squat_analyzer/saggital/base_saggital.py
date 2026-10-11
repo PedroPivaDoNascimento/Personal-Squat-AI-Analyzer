@@ -7,7 +7,7 @@ import pandas as pd
 from abc import ABC, abstractmethod
 
 class BaseSaggital(ABC):
-    def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5, user_height_cm=170):
+    def __init__(self, descent_threshold=0.05, ascent_return_threshold=0.02, trunk_error_threshold=5, knee_error_threshold=5, head_error_threshold=5, foot_error_threshold=5, user_height_cm=170, person_name=None, side=None):
         
         self.DESCENT_THRESHOLD = descent_threshold
         self.ASCENT_RETURN_THRESHOLD = ascent_return_threshold
@@ -18,6 +18,9 @@ class BaseSaggital(ABC):
 
         self.user_height_cm = user_height_cm
         self.scale_factor_cm = None
+
+        self.person_name = person_name
+        self.side = side
 
         self.ear_y_inicial = None
         self.ear_y_history = []
@@ -67,6 +70,17 @@ class BaseSaggital(ABC):
 
         self.repetition_timestamps = []
 
+        # Buffers de dados brutos por segmento (coletados frame a frame)
+        self.foot_repeat_data = []   # pé sagital
+        self.knee_repeat_data = []   # joelho sagital
+        self.trunk_repeat_data = []  # tronco sagital
+        self.head_repeat_data = []   # cabeça sagital
+
+        # Callback opcional (camada de serviço): chamado a cada repetição
+        # concluída com (numero_da_rep, dict_de_segmentos). Usado para
+        # persistir dados brutos/estatísticos de todos os segmentos em Excel.
+        self.on_repetition_completed = None
+
         self.trunk_intersections_df = pd.DataFrame(columns=[
             'Tempo (ms)', 
             'Comprimento Tíbia (cm)', 
@@ -91,6 +105,39 @@ class BaseSaggital(ABC):
             return hp, tr, hl, kn
         
         self._calibrate_and_validate_with_height(dict_lm)
+
+        # Coleta dados brutos por segmento (usados no callback por repetição)
+        self.foot_repeat_data.append({
+            'ankle_x':   dict_lm.get('left_ankle_x')   or dict_lm.get('right_ankle_x'),
+            'ankle_y':   dict_lm.get('left_ankle_y')   or dict_lm.get('right_ankle_y'),
+            'heel_x':    dict_lm.get('left_heel_x')    or dict_lm.get('right_heel_x'),
+            'heel_y':    dict_lm.get('left_heel_y')    or dict_lm.get('right_heel_y'),
+            'big_toe_x': dict_lm.get('left_big_toe_x') or dict_lm.get('right_big_toe_x'),
+            'big_toe_y': dict_lm.get('left_big_toe_y') or dict_lm.get('right_big_toe_y'),
+        })
+        self.knee_repeat_data.append({
+            'hip_x':     dict_lm.get('left_hip_x')    or dict_lm.get('right_hip_x'),
+            'hip_y':     dict_lm.get('left_hip_y')    or dict_lm.get('right_hip_y'),
+            'knee_x':    dict_lm.get('left_knee_x')   or dict_lm.get('right_knee_x'),
+            'knee_y':    dict_lm.get('left_knee_y')   or dict_lm.get('right_knee_y'),
+            'ankle_x':   dict_lm.get('left_ankle_x')  or dict_lm.get('right_ankle_x'),
+            'ankle_y':   dict_lm.get('left_ankle_y')  or dict_lm.get('right_ankle_y'),
+            'big_toe_x': dict_lm.get('left_big_toe_x') or dict_lm.get('right_big_toe_x'),
+        })
+        self.trunk_repeat_data.append({
+            'shoulder_x': dict_lm.get('left_shoulder_x') or dict_lm.get('right_shoulder_x'),
+            'shoulder_y': dict_lm.get('left_shoulder_y') or dict_lm.get('right_shoulder_y'),
+            'hip_x':      dict_lm.get('left_hip_x')      or dict_lm.get('right_hip_x'),
+            'hip_y':      dict_lm.get('left_hip_y')      or dict_lm.get('right_hip_y'),
+        })
+        self.head_repeat_data.append({
+            'ear_x':  dict_lm.get('left_ear_x')  or dict_lm.get('right_ear_x'),
+            'ear_y':  dict_lm.get('left_ear_y')  or dict_lm.get('right_ear_y'),
+            'eye_x':  dict_lm.get('left_eye_x')  or dict_lm.get('right_eye_x'),
+            'eye_y':  dict_lm.get('left_eye_y')  or dict_lm.get('right_eye_y'),
+            'nose_x': dict_lm.get('nose_x'),
+            'nose_y': dict_lm.get('nose_y'),
+        })
 
         self._detect_repetition_phase(dict_lm, timestamp_ms)
         hp, tr, hl, kn = self._check_errors(dict_lm, timestamp_ms)
@@ -179,7 +226,25 @@ class BaseSaggital(ABC):
             
             self.repetitions_detected += 1
             self.repetition_timestamps.append(current_ts / 1000)
-            
+
+            # Dispara o callback de persistência com todos os segmentos da
+            # repetição concluída. A coleta de dados é SEMPRE persistida;
+            # a gravação em disco é delegada à camada de serviço via callback,
+            # mantendo esta classe livre de I/O próprio.
+            if self.on_repetition_completed:
+                segment_data = {
+                    'foot':  list(self.foot_repeat_data),
+                    'knee':  list(self.knee_repeat_data),
+                    'trunk': list(self.trunk_repeat_data),
+                    'head':  list(self.head_repeat_data),
+                }
+                self.on_repetition_completed(self.repetitions_detected, segment_data)
+
+            self.foot_repeat_data = []
+            self.knee_repeat_data = []
+            self.trunk_repeat_data = []
+            self.head_repeat_data = []
+
     def finalize_analysis(self, current_ts):
         """
         Finaliza a análise de repetições detectadas.

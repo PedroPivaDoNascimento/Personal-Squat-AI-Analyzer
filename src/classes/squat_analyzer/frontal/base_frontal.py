@@ -61,22 +61,25 @@ class BaseFrontal(ABC):
         self.repetition_frame_counts = []
 
         self.foot_repeat_data = []
+        self.knee_repeat_data = []   # joelho frontal
+        self.hip_repeat_data = []    # quadril frontal
 
         # Callback opcional (camada de serviço): chamado a cada repetição
-        # concluída com (numero_da_rep, frames_de_pe_da_rep). Usado para
-        # persistir os dados brutos/estatísticos de pé em Excel.
+        # concluída com (numero_da_rep, segmentos_da_rep). Usado para
+        # persistir os dados brutos/estatísticos de todos os segmentos em Excel.
         self.on_repetition_completed = None
 
-    def _get_foot_frames_for_repetition(self, repetition_number):
+    def _get_segment_frames_for_repetition(self, buffer, repetition_number):
         """
-        Recorta os frames de pé correspondentes a uma repetição concluída,
-        usando o contador interno de frames (auto-curação dos dados acumulados).
+        Recorta os frames de um segmento correspondentes a uma repetição
+        concluída, usando o contador interno de frames (auto-curação).
 
         Args:
+            buffer (list): Buffer de dados do segmento (foot/knee/hip).
             repetition_number (int): Número da repetição (1, 2 ou 3).
 
         Returns:
-            list: Sublista de frames de pé da repetição (vazia se inválida).
+            list: Sublista de frames do segmento da repetição (vazia se inválida).
         """
         if repetition_number < 1 or repetition_number > len(self.repetition_frame_counts):
             return []
@@ -84,11 +87,14 @@ class BaseFrontal(ABC):
         start_idx = 0 if repetition_number == 1 else self.repetition_frame_counts[repetition_number - 2]
         end_idx = self.repetition_frame_counts[repetition_number - 1]
 
-        # Protege contra índices inconsistentes com o volume de frames coletados
-        end_idx = min(end_idx, len(self.foot_repeat_data))
+        end_idx = min(end_idx, len(buffer))
         start_idx = min(start_idx, end_idx)
 
-        return self.foot_repeat_data[start_idx:end_idx]
+        return buffer[start_idx:end_idx]
+
+    def _get_foot_frames_for_repetition(self, repetition_number):
+        """Alias legado para compatibilidade com FootDataService."""
+        return self._get_segment_frames_for_repetition(self.foot_repeat_data, repetition_number)
 
     @abstractmethod
     def create_dictionary_landmarks(self, lm_obj):
@@ -124,7 +130,25 @@ class BaseFrontal(ABC):
         # Pego os dados do pé e coloco no vetor onde tem os dados da repetição de pé
         foot_data = self._get_foot_data(dict_lm)
         self.foot_repeat_data.append(foot_data)
-        
+
+        # Coleta dados do joelho frontal (H-K-A, lado dependente do analisador)
+        self.knee_repeat_data.append({
+            'hip_x':   dict_lm.get('left_hip_x')   or dict_lm.get('right_hip_x'),
+            'hip_y':   dict_lm.get('left_hip_y')   or dict_lm.get('right_hip_y'),
+            'knee_x':  dict_lm.get('left_knee_x')  or dict_lm.get('right_knee_x'),
+            'knee_y':  dict_lm.get('left_knee_y')  or dict_lm.get('right_knee_y'),
+            'ankle_x': dict_lm.get('left_ankle_x') or dict_lm.get('right_ankle_x'),
+            'ankle_y': dict_lm.get('left_ankle_y') or dict_lm.get('right_ankle_y'),
+        })
+
+        # Coleta dados do quadril frontal (inclinação pélvica)
+        self.hip_repeat_data.append({
+            'left_hip_x':  dict_lm.get('left_hip_x'),
+            'left_hip_y':  dict_lm.get('left_hip_y'),
+            'right_hip_x': dict_lm.get('right_hip_x'),
+            'right_hip_y': dict_lm.get('right_hip_y'),
+        })
+
         self._detect_repetition_phase(dict_lm, timestamp_ms)
         hip, kn_valgus, foot_pronation = self._check_errors_frontal(dict_lm, timestamp_ms)
         
@@ -189,13 +213,20 @@ class BaseFrontal(ABC):
             self.total_foot_pronation_error_counter = 0
             # Os consecutivos serão resetados no 'inicial'
 
-            # A coleta dos dados de pé é SEMPRE persistida (independente das
-            # flags da interface); a gravação em disco é delegada à camada de
-            # serviço via callback, mantendo esta classe livre de I/O próprio.
-            if self.on_repetition_completed and self.foot_repeat_data:
-                self.on_repetition_completed(self.repetitions_detected, list(self.foot_repeat_data))
+            # A coleta dos dados de todos os segmentos é SEMPRE persistida;
+            # a gravação em disco é delegada à camada de serviço via callback,
+            # mantendo esta classe livre de I/O próprio.
+            if self.on_repetition_completed:
+                segment_data = {
+                    'foot':  list(self.foot_repeat_data),
+                    'knee':  list(self.knee_repeat_data),
+                    'hip':   list(self.hip_repeat_data),
+                }
+                self.on_repetition_completed(self.repetitions_detected, segment_data)
 
             self.foot_repeat_data = []
+            self.knee_repeat_data = []
+            self.hip_repeat_data = []
 
   
     def finalize_analysis(self, current_ts):
