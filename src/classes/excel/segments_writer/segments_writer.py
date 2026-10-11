@@ -45,7 +45,19 @@ class SegmentsWriter(ABC):
     RAW_SUBFOLDER = "dados brutos"
     STATISTIC_SUBFOLDER = "dados estatisticos"
 
-    def __init__(self, repetition, segment_repeat_data, person_name, plane_folder_name, side):
+    def __init__(
+        self,
+        repetition,
+        segment_repeat_data=None,
+        person_name=None,
+        plane_folder_name=None,
+        side=None,
+        **kwargs,
+    ):
+        # Suporte a alias de compatibilidade legado (ex: foot_repeat_data)
+        if segment_repeat_data is None and 'foot_repeat_data' in kwargs:
+            segment_repeat_data = kwargs.pop('foot_repeat_data')
+
         self.repetition = repetition
         self.segment_repeat_data = segment_repeat_data
         self.person_name = person_name

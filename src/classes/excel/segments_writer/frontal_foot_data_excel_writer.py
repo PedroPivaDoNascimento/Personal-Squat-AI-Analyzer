@@ -29,6 +29,27 @@ class FrontalFootDataExcelWriter(SegmentsWriter):
         side (str): 'direito' ou 'esquerdo'.
     """
 
+    def __init__(
+        self,
+        repetition,
+        segment_repeat_data=None,
+        person_name=None,
+        plane_folder_name="frontal",
+        side="direito",
+        **kwargs,
+    ):
+        # Suporte explícito ao nome legado de parâmetro 'foot_repeat_data'
+        foot_data = kwargs.pop('foot_repeat_data', None)
+        data = segment_repeat_data if segment_repeat_data is not None else foot_data
+        super().__init__(
+            repetition=repetition,
+            segment_repeat_data=data,
+            person_name=person_name,
+            plane_folder_name=plane_folder_name or "frontal",
+            side=side,
+            **kwargs,
+        )
+
     @property
     def segment_name(self):
         return 'pe'
