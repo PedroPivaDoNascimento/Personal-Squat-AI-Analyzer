@@ -91,32 +91,33 @@ class FrontalFootDataExcelWriter(SegmentsWriter):
 
             if self.side == 'esquerdo':
                 # Adiciona os valores à nossa lista de dados
-                estatisticas_linha.extend([desvio_padrao, iqr, media, mediana, p95, p05, amplitude])
+                estatisticas_linha.extend([media, mediana, desvio_padrao, p05, p95, amplitude, iqr])
 
                 # Cria rótulos descritivos para facilitar a leitura no Excel
                 prefixo = str(coluna)
                 nomes_colunas.extend([
+                    f'{prefixo}_media',
+                    f'{prefixo}_mediana',
                     f'{prefixo}_std',
-                    f'{prefixo}_iqr',
-                    f'{prefixo}_mean',
-                    f'{prefixo}_median',
+                    f'{prefixo}_p5',
                     f'{prefixo}_p95',
-                    f'{prefixo}_p05',
-                    f'{prefixo}_amplitude'
-                ])
+                    f'{prefixo}_amplitude',
+                    f'{prefixo}_iqr',
+                ])  
             else:
                 # Adiciona os valores à nossa lista de dados
-                estatisticas_linha.extend([desvio_padrao, media, mediana, p95, p05, amplitude])
+                estatisticas_linha.extend([media, mediana, desvio_padrao, p05, p95, amplitude, iqr])
 
                 # Cria rótulos descritivos para facilitar a leitura no Excel
                 prefixo = str(coluna)
                 nomes_colunas.extend([
+                    f'{prefixo}_media',
+                    f'{prefixo}_mediana',
                     f'{prefixo}_std',
-                    f'{prefixo}_mean',
-                    f'{prefixo}_median',
+                    f'{prefixo}_p5',
                     f'{prefixo}_p95',
-                    f'{prefixo}_p05',
-                    f'{prefixo}_amplitude'
+                    f'{prefixo}_amplitude',
+                    f'{prefixo}_iqr',
                 ])
         return pd.DataFrame([estatisticas_linha], columns=nomes_colunas)
 
