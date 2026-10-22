@@ -77,20 +77,20 @@ class HipDataExcelWriter(SegmentsWriter):
             media = dados.mean()
             mediana = dados.median()
             desvio_padrao = dados.std()
-            minimo = dados.min()
-            maximo = dados.max()
-            amplitude = maximo - minimo
+            p5 = dados.quantile(0.05)
+            p95 = dados.quantile(0.95)
+            amplitude = p95 - p5
             iqr = dados.quantile(0.75) - dados.quantile(0.25)
 
-            estatisticas_linha.extend([media, mediana, desvio_padrao, minimo, maximo, amplitude, iqr])
+            estatisticas_linha.extend([media, mediana, desvio_padrao, p5, p95, amplitude, iqr])
 
             prefixo = str(coluna)
             nomes_colunas.extend([
                 f'{prefixo}_media',
                 f'{prefixo}_mediana',
                 f'{prefixo}_std',
-                f'{prefixo}_min',
-                f'{prefixo}_max',
+                f'{prefixo}_p5',
+                f'{prefixo}_p95',
                 f'{prefixo}_amplitude',
                 f'{prefixo}_iqr',
             ])

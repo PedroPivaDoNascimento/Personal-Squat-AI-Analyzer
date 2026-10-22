@@ -67,24 +67,24 @@ class TrunkDataExcelWriter(SegmentsWriter):
         for coluna in df_enriched.columns:
             dados = pd.to_numeric(df_enriched[coluna], errors='coerce').dropna()
             if dados.empty:
-                media = mediana = desvio_padrao = maximo = minimo = amplitude = iqr = 0.0
+                media = mediana = desvio_padrao = p5 = p95 = amplitude = iqr = 0.0
             else:
                 desvio_padrao = float(dados.std(ddof=0))
                 iqr = float(dados.quantile(0.75) - dados.quantile(0.25))
                 media = float(dados.mean())
                 mediana = float(dados.median())
-                maximo = float(dados.max())
-                minimo = float(dados.min())
-                amplitude = maximo - minimo
+                p5 = float(dados.quantile(0.05))
+                p95 = float(dados.quantile(0.95))
+                amplitude = p95 - p5
 
-            estatisticas_linha.extend([media, mediana, desvio_padrao, maximo, minimo, amplitude, iqr])
+            estatisticas_linha.extend([media, mediana, desvio_padrao, p5, p95, amplitude, iqr])
             prefixo = str(coluna)
             nomes_colunas.extend([
                 f'{prefixo}_media',
                 f'{prefixo}_mediana',
                 f'{prefixo}_std',
-                f'{prefixo}_max',
-                f'{prefixo}_min',
+                f'{prefixo}_p5',
+                f'{prefixo}_p95',
                 f'{prefixo}_amplitude',
                 f'{prefixo}_iqr',
             ])

@@ -192,8 +192,9 @@ class BaseFrontal(ABC):
             
             hip_rep_result = 1 if self.total_hip_error_counter > 0 else 0
             knee_rep_result = 1 if self.total_knee_valgus_error_counter > 0 else 0
-            foot_rep_result = self._check_foot_pronation_error()
-            
+            #foot_rep_result = self._check_foot_pronation_error()
+            foot_rep_result = 0
+
             self.reps['hip'].append(hip_rep_result)
             self.reps['knee_valgus'].append(knee_rep_result)
             self.reps['foot_pronation'].append(foot_rep_result)

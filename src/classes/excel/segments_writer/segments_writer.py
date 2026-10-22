@@ -64,9 +64,7 @@ class SegmentsWriter(ABC):
         self.plane_folder_name = plane_folder_name
         self.side = side
 
-    # ------------------------------------------------------------------ #
-    # Identificação do segmento (abstrato: definido na subclasse)        #
-    # ------------------------------------------------------------------ #
+    
     @property
     @abstractmethod
     def segment_name(self):
@@ -76,9 +74,7 @@ class SegmentsWriter(ABC):
         """
         pass
 
-    # ------------------------------------------------------------------ #
-    # Métodos concretos compartilhados (Template / Reutilizáveis)        #
-    # ------------------------------------------------------------------ #
+    
     def _build_set_folders(self):
         """Instancia o `SetFolders` configurado para o segmento específico."""
         return SetFolders(
@@ -178,9 +174,7 @@ class SegmentsWriter(ABC):
         """
         pass
 
-    # ------------------------------------------------------------------ #
-    # Persistência incremental compartilhada                             #
-    # ------------------------------------------------------------------ #
+   
     def _write_dataframe_incrementally(self, folder_path, df_novo):
         """
         Gravação incremental/persistente com openpyxl + `pd.concat` com

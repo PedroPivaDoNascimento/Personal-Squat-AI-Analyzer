@@ -84,41 +84,43 @@ class FrontalFootDataExcelWriter(SegmentsWriter):
             iqr = dados.quantile(0.75) - dados.quantile(0.25)
             media = dados.mean()
             mediana = dados.median()
-            maximo = dados.max()
-            minimo = dados.min()
-            amplitude = maximo - minimo
+            p95 = dados.quantile(0.95)
+            p05 = dados.quantile(0.05)
+            amplitude = p95 - p05
+
 
             if self.side == 'esquerdo':
                 # Adiciona os valores à nossa lista de dados
-                estatisticas_linha.extend([desvio_padrao, iqr])
+                estatisticas_linha.extend([desvio_padrao, iqr, media, mediana, p95, p05, amplitude])
 
                 # Cria rótulos descritivos para facilitar a leitura no Excel
                 prefixo = str(coluna)
                 nomes_colunas.extend([
                     f'{prefixo}_std',
-                    f'{prefixo}_iqr'
+                    f'{prefixo}_iqr',
+                    f'{prefixo}_mean',
+                    f'{prefixo}_median',
+                    f'{prefixo}_p95',
+                    f'{prefixo}_p05',
+                    f'{prefixo}_amplitude'
                 ])
             else:
                 # Adiciona os valores à nossa lista de dados
-                estatisticas_linha.extend([media, mediana, desvio_padrao, maximo, minimo, amplitude])
+                estatisticas_linha.extend([desvio_padrao, media, mediana, p95, p05, amplitude])
 
                 # Cria rótulos descritivos para facilitar a leitura no Excel
                 prefixo = str(coluna)
                 nomes_colunas.extend([
-                    f'{prefixo}_media',
-                    f'{prefixo}_mediana',
                     f'{prefixo}_std',
-                    f'{prefixo}_max',
-                    f'{prefixo}_min',
+                    f'{prefixo}_mean',
+                    f'{prefixo}_median',
+                    f'{prefixo}_p95',
+                    f'{prefixo}_p05',
                     f'{prefixo}_amplitude'
                 ])
-
-        # 4. Cria o DataFrame final com uma única linha e colunas rotuladas
         return pd.DataFrame([estatisticas_linha], columns=nomes_colunas)
 
-    # ------------------------------------------------------------------ #
-    # Aliases de compatibilidade com a API do writer legado              #
-    # ------------------------------------------------------------------ #
+    
     def write_raw_foot_data(self):
         """Alias legado para `write_raw_data()` (transição suave)."""
         return self.write_raw_data()
