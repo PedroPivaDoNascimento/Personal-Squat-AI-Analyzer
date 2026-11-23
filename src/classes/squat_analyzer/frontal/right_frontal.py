@@ -156,29 +156,42 @@ class RightFrontal(BaseFrontal):
             
         return kn_valgus_status
 
-    def _check_foot_pronation_error(self):
-        # Garantia de consistência: se `side` vier vazio, o caminho de gravação
-        # seria normalizado como "planilhas/frontal/dados_pe" (fora da pasta do
-        # lado) e os arquivos pareceriam "sumidos". Assume 'direito' neste analisador.
-        if not self.side:
-            self.side = "direito"
-        foot_data_excel_writer = FootDataExcelWriter(self.repetitions_detected, self.foot_repeat_data, self.person_name, "frontal", self.side)
-        static_data = foot_data_excel_writer.convert_data_to_statistic_pandas()
-        X = static_data.iloc[:, 2:].values
-
-        # Cache de modelo em nivel de modulo (Otimizacao Fase 3.3): o .pkl
-        # era desserializado do disco a cada repeticao concluida; agora ele
-        # e carregado uma unica vez e reutilizado entre analises do processo.
-        model = _MODEL_CACHE.get('modelo_pe_frontal_direito.pkl')
-        if model is None:
-            current_dir = os.path.dirname(os.path.abspath(__file__))
-            model_path = os.path.join(current_dir, "../../../../models/modelo_pe_frontal_direito.pkl")
-            model = joblib.load(model_path)
-            _MODEL_CACHE['modelo_pe_frontal_direito.pkl'] = model
-
-        y_pred = model.predict(X)
-        foot_pronation_status = y_pred[0]
+    def _check_foot_pronation_error(self, dict_lm, timestamp_ms):
+        foot_pronation_status = 0
+    
+    
+        if self.initial_midpoint_y is None:
+            return 0 
         
+        try:
+            heel_y = dict_lm['right_heel_y']
+            big_toe_y = dict_lm['right_big_toe_y']
+            
+            current_midpoint_y = (heel_y + big_toe_y) / 2
+            
+    
+            if current_midpoint_y < self.initial_midpoint_y - self.Y_SHIFT_TOLERANCE:
+                self.consecutive_foot_pronation_error_counter += 1
+                foot_pronation_status = 1
+                print(f"ERRO DE PRONAÇÃO (Midpoint Y): Ponto médio atual: {current_midpoint_y:.4f} (Limite: {self.initial_midpoint_y + self.Y_SHIFT_TOLERANCE:.4f}), ocorreu no segundo: {timestamp_ms/1000:.2f}")
+
+
+            else:
+                self.consecutive_foot_pronation_error_counter = 0
+
+            if self.consecutive_foot_pronation_error_counter >= self.FOOT_PRONATION_ERROR_THRESHOLD:
+                self.total_foot_pronation_error_counter += 1
+                self.consecutive_foot_pronation_error_counter = 0
+
+
+                
+        except KeyError as e:
+            print(f"Erro: O ponto anatômico {e} não foi encontrado no dicionário (KeyError).")
+            self.consecutive_foot_pronation_error_counter = 0
+        except Exception as e:
+            print(f"Erro inesperado ao calcular pronação do pé por ponto médio Y: {e}")
+            self.consecutive_foot_pronation_error_counter = 0
+                
         return foot_pronation_status
         
   
