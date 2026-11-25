@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from classes.excel.segments_writer.hip_data_excel_writer import HipDataExcelWriter
 import joblib
 
 from ...vector_calculator import VectorCalculator
@@ -113,36 +114,30 @@ class LeftFrontal(BaseFrontal):
             'heel_x': dict_lm['left_heel_x'],
             'heel_y': dict_lm['left_heel_y']
         }
-    def _check_hip_tilt_error(self, dict_lm, timestamp_ms):
-        hip_status = 0
-        try:
-            x1, y1 = dict_lm['left_hip_x'], dict_lm['left_hip_y']
-            x2, y2 = dict_lm['right_hip_x'], dict_lm['right_hip_y']
+    def _check_hip_tilt_error(self):
+        # Garantia de consistência: se `side` vier vazio, o caminho de gravação
+        # seria normalizado como "planilhas/frontal/dados_quadril" (fora da pasta do
+        # lado) e os arquivos pareceriam "sumidos". Assume 'esquerdo' neste analisador.
+        if not self.side:
+            self.side = "esquerdo"
+        hip_data_excel_writer = HipDataExcelWriter(self.repetitions_detected, self.hip_repeat_data, self.person_name, "frontal", self.side)
+        static_data = hip_data_excel_writer.convert_data_to_statistic_pandas()
+        X = static_data.iloc[:, 2:]
 
-            angle_deg = VectorCalculator.angle_to_horizontal(x1, y1, x2, y2)
-            
-            #if (timestamp_ms/1000 > 3 and timestamp_ms/1000 <= 5) or (timestamp_ms/1000 > 7 and timestamp_ms/1000 <= 9) or (timestamp_ms/1000 > 10 and timestamp_ms/1000 <= 12):
-            #    print(f"Angulo atual quadil é de {angle_deg:.2f} e ocorreu no segundo {timestamp_ms/1000:.2f} limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
-            
-            if angle_deg < self.HIP_ANGLE_TOLERANCE - 0.5:
-                #if (self.repetitions_detected != 1):
-                #    print(f"Repetição {(self.repetitions_detected+1)}: Ângulo atual quadril é de {angle_deg:.2f} e ocorreu esse erro no segundo {timestamp_ms/1000:.2f}. Limite = {self.HIP_ANGLE_TOLERANCE - 0.5:.2f}")
-                self.consecutive_hip_error_counter += 1
-                hip_status = 1
-            else:
-                self.consecutive_hip_error_counter = 0
+        # Cache de modelo em nivel de modulo (Otimizacao Fase 3.3): o .pkl
+        # era desserializado do disco a cada repeticao concluida; agora ele
+        # e carregado uma unica vez e reutilizado entre analises do processo.
+        model = _MODEL_CACHE.get('modelo_quadril_frontal_esquerdo.pkl')
+        if model is None:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            model_path = os.path.join(current_dir, "../../../../models/modelo_quadril_frontal_esquerdo.pkl")
+            model = joblib.load(model_path)
+            _MODEL_CACHE['modelo_quadril_frontal_esquerdo.pkl'] = model
 
-            if self.consecutive_hip_error_counter >= self.HIP_ERROR_THRESHOLD:
-                self.total_hip_error_counter += 1
-                self.consecutive_hip_error_counter = 0
-
-
-                
-        except Exception as e:
-            print(f"Erro ao calcular inclinação do quadril: {e}")
-            self.consecutive_hip_error_counter = 0
-            
-        return hip_status
+        y_pred = model.predict(X)
+        hip_tilt_status = y_pred[0]
+        
+        return hip_tilt_status
 
     def _check_knee_valgus_error(self, dict_lm, timestamp_ms):
         kn_valgus_status = 0

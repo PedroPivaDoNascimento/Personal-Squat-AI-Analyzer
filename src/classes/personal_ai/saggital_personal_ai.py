@@ -25,12 +25,16 @@ class SagittalAI(BaseAI):
         if (side == "right"):
             self.squat_analyzer = RightSaggital(
                 user_height_cm=user_height_cm,
-                **kwargs 
+                person_name=name_pessoa,
+                side='direito',
+                **kwargs
             )
         elif (side == "left"):
             self.squat_analyzer = LeftSaggital(
                 user_height_cm=user_height_cm,
-                **kwargs 
+                person_name=name_pessoa,
+                side='esquerdo',
+                **kwargs
             )
         else:
             print("Erro ao definir o lado")

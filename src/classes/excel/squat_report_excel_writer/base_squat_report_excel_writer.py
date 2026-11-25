@@ -129,10 +129,28 @@ class BaseSquatReportExcelWriter(ABC):
 
         try:
             df_report.to_excel(file_path, index=False)
-            st.success(f"Relatório de análise salvo com sucesso em '{file_path}'!")
+            try:
+                from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+                has_ctx = get_script_run_ctx() is not None
+            except Exception:
+                has_ctx = False
+
+            if has_ctx:
+                st.success(f"Relatório de análise salvo com sucesso em '{file_path}'!")
+            else:
+                print(f"✅ Relatório de análise salvo com sucesso em '{file_path}'!")
         except Exception as e:
-            st.error(f"Erro ao salvar o relatório Excel: {e}")
-            st.warning("Certifique-se de que o arquivo não está aberto em outro programa e que você tem permissões de escrita.")
+            try:
+                from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+                has_ctx = get_script_run_ctx() is not None
+            except Exception:
+                has_ctx = False
+
+            if has_ctx:
+                st.error(f"Erro ao salvar o relatório Excel: {e}")
+                st.warning("Certifique-se de que o arquivo não está aberto em outro programa e que você tem permissões de escrita.")
+            else:
+                print(f"❌ Erro ao salvar o relatório Excel: {e}")
 
     def generate_report(self): 
         """
