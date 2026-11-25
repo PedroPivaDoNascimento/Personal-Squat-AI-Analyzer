@@ -175,7 +175,7 @@ class BaseFrontal(ABC):
 
         if self.current_phase in ['descendo', 'subindo']:
             
-            hip_status = self._check_hip_tilt_error(dict_lm, timestamp_ms)
+            hip_status = 0
             kn_valgus_status = self._check_knee_valgus_error(dict_lm, timestamp_ms)
             foot_pronation_status = 0
         
@@ -190,7 +190,7 @@ class BaseFrontal(ABC):
     def _complete_repetition(self, current_ts):        
         if self.repetitions_detected < 3:
             
-            hip_rep_result = 1 if self.total_hip_error_counter > 0 else 0
+            hip_rep_result = self._check_hip_tilt_error()
             knee_rep_result = 1 if self.total_knee_valgus_error_counter > 0 else 0
             foot_rep_result = self._check_foot_pronation_error()
             
